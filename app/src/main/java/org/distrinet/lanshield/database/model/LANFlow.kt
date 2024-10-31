@@ -1,0 +1,188 @@
+package org.distrinet.lanshield.database.model
+
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.util.Log
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+import androidx.room.TypeConverters
+import org.distrinet.lanshield.PACKAGE_NAME_ROOT
+import org.distrinet.lanshield.PACKAGE_NAME_SYSTEM
+import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
+import org.distrinet.lanshield.Policy
+import org.distrinet.lanshield.TAG
+import org.distrinet.lanshield.database.dao.InetSocketAddressConverter
+import org.distrinet.lanshield.database.dao.StringListConverter
+import org.distrinet.lanshield.database.dao.StringUUIDConverter
+import org.distrinet.lanshield.getPackageNameFromUid
+import org.json.JSONObject
+import tech.httptoolkit.android.vpn.Session
+import java.math.BigInteger
+import java.net.InetAddress
+import java.net.InetSocketAddress
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.util.UUID
+
+
+@Entity(tableName = "flow")
+@TypeConverters(InetSocketAddressConverter::class, StringListConverter::class, StringUUIDConverter::class)
+data class LANFlow(
+    val appId: String?,
+    @PrimaryKey
+    @TypeConverters(StringUUIDConverter::class)
+    val uuid: UUID,
+    @TypeConverters(InetSocketAddressConverter::class)
+    val remoteEndpoint: InetSocketAddress,
+    @TypeConverters(InetSocketAddressConverter::class)
+    val localEndpoint: InetSocketAddress,
+    val transportLayerProtocol: String,
+    val timeStart: Long,
+    var timeEnd: Long,
+    var packetCountEgress: Long,
+    var packetCountIngress: Long,
+    var dataIngress: Long,
+    var dataEgress: Long,
+    var tcpEstablishedReached: Boolean,
+    var appliedPolicy: Policy,
+    @TypeConverters(StringListConverter::class)
+    var protocols: List<String>,
+    val timeEndAtLastSync: Long,
+) {
+    fun toJSON(): JSONObject {
+        val json = JSONObject()
+        json.put("flow_uuid", uuid)
+        json.put("app_id", appId)
+        json.put("time_start", convertMillisToRFC8601(timeStart))
+        json.put("time_end", convertMillisToRFC8601(timeEnd))
+        json.put("remote_ip", remoteEndpoint.toString().removePrefix("/"))
+        json.put("remote_port", remoteEndpoint.port)
+        json.put("local_ip", localEndpoint.toString().removePrefix("/"))
+        json.put("local_port", localEndpoint.port)
+        json.put("transport_layer_protocol", transportLayerProtocol)
+        json.put("packet_count_egress", packetCountEgress)
+        json.put("data_egress", dataEgress)
+        json.put("packet_count_ingress", packetCountIngress)
+        json.put("data_ingress", dataIngress)
+        json.put("detected_protocols", protocols.joinToString(","))
+        json.put("time_end_at_last_sync", timeEndAtLastSync)
+
+        if (transportLayerProtocol.contentEquals("TCP")) {
+            json.put("tcp_established_reached", tcpEstablishedReached)
+        }
+
+        return json
+    }
+
+    fun increaseEgress(amountPackets: Long, amountBytes: Long) {
+        synchronized(this) {
+            packetCountEgress += amountPackets
+            dataEgress += amountBytes
+            timeEnd = System.currentTimeMillis()
+        }
+    }
+
+    fun increaseIngress(amountPackets: Long, amountBytes: Long) {
+        synchronized(this) {
+            packetCountIngress += amountPackets
+            dataIngress += amountBytes
+            timeEnd = System.currentTimeMillis()
+        }
+    }
+
+    companion object {
+
+        fun createFlow(
+            appId: String,
+            remoteEndpoint: InetSocketAddress,
+            localEndpoint: InetSocketAddress,
+            transportLayerProtocol: String,
+            appliedPolicy: Policy,
+        ): LANFlow {
+            val time = System.currentTimeMillis()
+
+            return LANFlow(
+                appId = appId,
+                uuid = UUID.randomUUID(),
+                remoteEndpoint = remoteEndpoint,
+                localEndpoint = localEndpoint,
+                transportLayerProtocol = transportLayerProtocol,
+                timeStart = time,
+                timeEnd = time,
+                packetCountEgress = 0L,
+                packetCountIngress = 0L,
+                dataIngress = 0L,
+                dataEgress = 0L,
+                tcpEstablishedReached = false,
+                appliedPolicy = appliedPolicy,
+                protocols = listOf(),
+                timeEndAtLastSync = 0
+            )
+        }
+
+        fun fromHttpToolkitSession(
+            session: Session,
+            connectivityManager: ConnectivityManager,
+            packageManager: PackageManager,
+        ): LANFlow {
+
+            Log.w(TAG, "creating flow fromHttpToolkitSession")
+            if (session.flow != null) {
+                throw IllegalArgumentException("Passed session already has an associated flow.")
+            }
+            Log.w(TAG, "creating flow fromHttpToolkitSession: init variables")
+            val localIp = InetAddress.getByAddress(session.sourceIp.bytes)
+            val remoteIp = InetAddress.getByAddress(session.destIp.bytes)
+            val localEndpoint = InetSocketAddress(localIp, session.sourcePort)
+            val remoteEndpoint = InetSocketAddress(remoteIp, session.destPort)
+
+            var appId = PACKAGE_NAME_UNKNOWN
+            Log.w(TAG, "creating flow fromHttpToolkitSession: variables init done")
+
+
+            if (session.protocol.name.contentEquals("UDP") || session.protocol.name.contentEquals("TCP")) {
+                Log.w(TAG, "creating flow fromHttpToolkitSession: trying to get appUid")
+                var protocol = 6
+                if (session.protocol.name.contentEquals("UDP")) {
+                    protocol = 17
+                }
+                val appUid = connectivityManager.getConnectionOwnerUid(
+                    protocol,
+                    localEndpoint,
+                    remoteEndpoint
+                )
+                Log.w(TAG, "creating flow fromHttpToolkitSession: got appUid")
+                appId = getPackageNameFromUid(appUid, packageManager)
+            }
+
+            Log.w(TAG, "creating flow fromHttpToolkitSession: calling createFlow")
+
+            val flow = createFlow(
+                appId = appId,
+                remoteEndpoint = remoteEndpoint,
+                localEndpoint = localEndpoint,
+                transportLayerProtocol = session.protocol.name,
+                appliedPolicy = Policy.ALLOW
+            )
+            session.flow = flow
+            Log.w(TAG, "creating flow fromHttpToolkitSession returning")
+            return flow
+        }
+
+        fun convertMillisToRFC8601(millis: Long): String {
+            val instant = Instant.ofEpochMilli(millis)
+            val formatter =
+                DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneId.systemDefault())
+            return formatter.format(instant)
+        }
+    }
+}
+
+
+data class FlowAverage(
+    var totalBytesIngress: Long, var totalBytesEgress: Long,
+    var totalBytesIngressLast24h: Long, var totalBytesEgressLast24h: Long,
+    var appId: String, var latestTimeEnd: Long
+)
