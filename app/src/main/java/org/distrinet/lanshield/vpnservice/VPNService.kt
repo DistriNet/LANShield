@@ -18,8 +18,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.distrinet.lanshield.DEFAULT_POLICY_KEY
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.SERVICE_NOTIFICATION_CHANNEL_ID
@@ -30,6 +33,8 @@ import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
 import org.distrinet.lanshield.TAG
+import org.distrinet.lanshield.database.dao.LANShieldSessionDao
+import org.distrinet.lanshield.database.model.LANShieldSession
 import tech.httptoolkit.android.vpn.socket.IProtectSocket
 import tech.httptoolkit.android.vpn.socket.SocketProtector
 import java.net.InetAddress
@@ -48,6 +53,8 @@ class VPNService : VpnService(), IProtectSocket {
 
     private var isVPNRunning = false
 
+    private var lanShieldSession: LANShieldSession? = null
+
     @Inject
     lateinit var vpnServiceStatus: MutableLiveData<VPN_SERVICE_STATUS>
 
@@ -62,6 +69,9 @@ class VPNService : VpnService(), IProtectSocket {
 
     @Inject
     lateinit var vpnNotificationManager: LANShieldNotificationManager
+
+    @Inject
+    lateinit var lanShieldSessionDao: LANShieldSessionDao
 
     companion object {
         const val STOP_VPN_SERVICE = "STOP_VPN_SERVICE"
@@ -118,7 +128,19 @@ class VPNService : VpnService(), IProtectSocket {
 
     override fun onDestroy() {
         setVPNRunning(false)
+        stopLanShieldSession()
         super.onDestroy()
+    }
+
+    private fun stopLanShieldSession() {
+        if(lanShieldSession != null) {
+            lanShieldSession!!.timeEnd = System.currentTimeMillis()
+            val session = lanShieldSession!!
+            CoroutineScope(Dispatchers.IO).launch {
+                lanShieldSessionDao.update(session)
+            }
+            lanShieldSession = null
+        }
     }
 
     private fun createNotification(): Notification {
@@ -143,6 +165,8 @@ class VPNService : VpnService(), IProtectSocket {
     }
 
     private fun stopVPNThread() {
+        stopLanShieldSession()
+
         vpnRunnable?.let {
             accessPolicies.removeObserver(it.accessPoliesObserver)
             defaultForwardPolicyLive.removeObserver(it.defaultPolicyObserver)
@@ -250,6 +274,8 @@ class VPNService : VpnService(), IProtectSocket {
         }
     }
 
+
+
     private fun startVPNThread() {
         stopVPNThread()
         updateAlwaysOnStatus()
@@ -279,9 +305,16 @@ class VPNService : VpnService(), IProtectSocket {
 
 
         vpnThread = Thread(vpnRunnable, "VPN thread")
-        vpnThread!!.start()
 
+        stopLanShieldSession()
+        lanShieldSession = LANShieldSession.createLANShieldSession()
+        CoroutineScope(Dispatchers.IO).launch {
+            lanShieldSessionDao.insert(lanShieldSession!!)
+        }
+        vpnThread!!.start()
         setVPNRunning(true)
+
+
     }
 
     private fun updateAlwaysOnStatus() {

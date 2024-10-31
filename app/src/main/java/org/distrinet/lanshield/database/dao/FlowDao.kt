@@ -60,10 +60,13 @@ interface FlowDao {
             WHERE timeEndAtLastSync < timeEnd 
     """
     )
-    fun getUnsyncedFlows(): Flow<List<LANFlow>>
+    fun getUnsyncedFlows(): List<LANFlow>
 
     @Query(
         "UPDATE flow SET timeEndAtLastSync = :timeEndLast WHERE uuid = :flowId"
     )
-    fun updateFlowsSyncedTime(flowId:String,timeEndLast: Long)
+    fun updateFlowsSyncedTime(flowId:UUID, timeEndLast: Long)
+
+    @Query("DELETE FROM Flow WHERE uuid IN (:ids) AND scheduledForDeletion=1")
+    fun removeAllScheduledForDeletionById(ids: List<UUID>)
 }

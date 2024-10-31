@@ -34,6 +34,7 @@ import org.distrinet.lanshield.backendsync.AppUsageStats
 import org.distrinet.lanshield.backendsync.SendToServerWorker
 import org.distrinet.lanshield.database.AppDatabase
 import org.distrinet.lanshield.database.dao.FlowDao
+import org.distrinet.lanshield.database.dao.LANShieldSessionDao
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.vpnservice.LANShieldNotificationManager
 import tech.httptoolkit.android.TAG
@@ -52,9 +53,14 @@ const val PACKAGE_NAME_ROOT = "Root"
 const val PACKAGE_NAME_SYSTEM = "System"
 
 const val BACKEND_URL = "https://api.lanshield.eu"
+//const val BACKEND_URL = "http://192.168.157.147"
+//const val BACKEND_URL = "http://192.168.55.147:5000"
+
+
 const val ADD_FLOWS = "/add_flow"
 const val ADD_ACL = "/add_acl"
 const val ADD_APP_USAGE = "/add_app_usage"
+const val ADD_LANSHIELD_SESSION = "/add_session"
 const val GET_APP_INSTALLATION_UUID = "/get_app_installation_uuid"
 const val SHOULD_SYNC = "/should_sync"
 const val ACL_SUCCESS = "ACL uploaded successfully"
@@ -202,6 +208,7 @@ class LANShieldApplication : Application(), Configuration.Provider {
 class SendToServerWorkerFactory @Inject constructor(
     private val flowDao: FlowDao,
     private val lanAccessPolicyDao: LanAccessPolicyDao,
+    private val lanShieldSessionDao: LANShieldSessionDao,
     private val dataStore: DataStore<Preferences>
 ) : WorkerFactory() {
     override fun createWorker(
@@ -209,11 +216,12 @@ class SendToServerWorkerFactory @Inject constructor(
         workerClassName: String,
         workerParameters: WorkerParameters
     ): ListenableWorker = SendToServerWorker(
-        appContext,
-        workerParameters,
-        flowDao,
-        lanAccessPolicyDao,
-        dataStore
+        context = appContext,
+        params = workerParameters,
+        flowDao = flowDao,
+        lanAccessPolicyDao = lanAccessPolicyDao,
+        lanShieldSessionDao = lanShieldSessionDao,
+        dataStore = dataStore
     )
 }
 
@@ -258,6 +266,11 @@ object AppModule {
     @Provides
     fun provideFlowDao(appDatabase: AppDatabase): FlowDao {
         return appDatabase.FlowDao()
+    }
+
+    @Provides
+    fun provideLANShieldSessionDao(appDatabase: AppDatabase): LANShieldSessionDao {
+        return appDatabase.LANShieldSessionDao()
     }
 
     @Provides

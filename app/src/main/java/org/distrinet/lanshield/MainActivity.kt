@@ -26,6 +26,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
+import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
@@ -132,8 +133,7 @@ class MainActivity : ComponentActivity() {
         val workManager = WorkManager.getInstance(this)
 
         workManager.enqueueUniquePeriodicWork(
-            //TODO: Maybe change the name of the worker
-            "backendSyncWorker",
+            "lanshieldSyncWorker",
             ExistingPeriodicWorkPolicy.KEEP,
             periodicWorkRequest
         )
@@ -144,6 +144,7 @@ class MainActivity : ComponentActivity() {
 //
 //        val oneTimeWorkRequest = OneTimeWorkRequest.Builder(SendToServerWorker::class.java)
 //            .setConstraints(constraints)
+//            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
 //            .build()
 //
 //        val workManager = WorkManager.getInstance(this)
