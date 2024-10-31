@@ -7,12 +7,12 @@ plugins {
 
 android {
     namespace = "org.distrinet.lanshield"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "org.distrinet.lanshield"
         minSdk = 29
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 4
         versionName = "0.4"
 
@@ -43,6 +43,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"

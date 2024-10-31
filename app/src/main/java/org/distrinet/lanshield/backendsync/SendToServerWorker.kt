@@ -2,7 +2,6 @@ package org.distrinet.lanshield.backendsync
 
 import android.app.usage.UsageStats
 import android.content.Context
-import android.content.pm.PackageInfo
 import android.os.Build
 import android.util.Log
 import androidx.datastore.core.DataStore
@@ -29,19 +28,23 @@ import org.distrinet.lanshield.ACL_SUCCESS
 import org.distrinet.lanshield.ADD_ACL
 import org.distrinet.lanshield.ADD_APP_USAGE
 import org.distrinet.lanshield.ADD_FLOWS
+import org.distrinet.lanshield.ADD_LANSHIELD_SESSION
 import org.distrinet.lanshield.APP_INSTALLATION_UUID
 import org.distrinet.lanshield.APP_USAGE_SUCCESS
 import org.distrinet.lanshield.BACKEND_URL
+import org.distrinet.lanshield.BuildConfig
 import org.distrinet.lanshield.GET_APP_INSTALLATION_UUID
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.SHARE_APP_USAGE_KEY
 import org.distrinet.lanshield.SHARE_LAN_METRICS_KEY
 import org.distrinet.lanshield.SHOULD_SYNC
+import org.distrinet.lanshield.TAG
 import org.distrinet.lanshield.TIME_OF_LAST_SYNC
 import org.distrinet.lanshield.database.dao.FlowDao
+import org.distrinet.lanshield.database.dao.LANShieldSessionDao
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.database.model.LANFlow
-import org.distrinet.lanshield.database.model.LanAccessPolicy
+import org.distrinet.lanshield.database.model.LANShieldSession
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -58,6 +61,7 @@ class SendToServerWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     @Assisted private val flowDao: FlowDao,
     @Assisted private val lanAccessPolicyDao: LanAccessPolicyDao,
+    @Assisted private val lanShieldSessionDao: LANShieldSessionDao,
     @Assisted private val dataStore: DataStore<Preferences>,
     private val appUsageStats: AppUsageStats = AppUsageStats(),
     private val queue: RequestQueue = Volley.newRequestQueue(context),
@@ -79,27 +83,31 @@ class SendToServerWorker @AssistedInject constructor(
     }
 
     private suspend fun sendRequestsRequiringUUID() {
-        val shareAppUsageEnabled =
-            dataStore.data.map { it[SHARE_APP_USAGE_KEY] ?: false }.distinctUntilChanged().first()
-        if (shareAppUsageEnabled) {
-            var timeOfLastSync = dataStore.data.map { it[TIME_OF_LAST_SYNC] }.first()
-            if (timeOfLastSync == null) {
-                timeOfLastSync = Calendar.getInstance().timeInMillis
-                timeOfLastSync -= TimeUnit.DAYS.toMillis(1)
+        CoroutineScope(Dispatchers.IO).launch {
+            val shareAppUsageEnabled =
+                dataStore.data.map { it[SHARE_APP_USAGE_KEY] ?: false }.distinctUntilChanged().first()
+            if (shareAppUsageEnabled) {
+                var timeOfLastSync = dataStore.data.map { it[TIME_OF_LAST_SYNC] }.first()
+                if (timeOfLastSync == null) {
+                    timeOfLastSync = Calendar.getInstance().timeInMillis
+                    timeOfLastSync -= TimeUnit.DAYS.toMillis(1)
+                }
+                val appUsageStatistics =
+                    appUsageStats.getUsageStatsList(applicationContext, timeOfLastSync)
+                addAppUsage(appUsageStatistics)
             }
-            val appUsageStatistics =
-                appUsageStats.getUsageStatsList(applicationContext, timeOfLastSync)
-            addAppUsage(appUsageStatistics)
+
+            val flows = flowDao.getUnsyncedFlows()
+            addFlows(flows)
+
+            val allowedUnsyncedApps = lanAccessPolicyDao.getAllUnsyncedPolicy(Policy.ALLOW)
+            val blockedUnsyncedApps = lanAccessPolicyDao.getAllUnsyncedPolicy(Policy.BLOCK)
+            val defaultUnsyncedApps = lanAccessPolicyDao.getAllUnsyncedPolicy(Policy.DEFAULT)
+            addACL(allowedUnsyncedApps, blockedUnsyncedApps, defaultUnsyncedApps)
+
+            val sessions = lanShieldSessionDao.getAllShouldSync()
+            addLanShieldSessions(sessions)
         }
-
-        val flows = flowDao.getUnsyncedFlows().first()
-        addFlows(flows)
-
-        val allowedUnsyncedApps = lanAccessPolicyDao.getAllUnsyncedPolicy(Policy.ALLOW).first()
-        val blockedUnsyncedApps = lanAccessPolicyDao.getAllUnsyncedPolicy(Policy.BLOCK).first()
-        val defaultUnsyncedApps = lanAccessPolicyDao.getAllUnsyncedPolicy(Policy.DEFAULT).first()
-        addACL(allowedUnsyncedApps, blockedUnsyncedApps, defaultUnsyncedApps)
-
     }
 
     private fun setAppInstallationUUID() {
@@ -120,13 +128,14 @@ class SendToServerWorker @AssistedInject constructor(
                     ADD_APP_USAGE -> handleAppUsageResponse(response)
                     ADD_FLOWS -> handleAddFlowResponse(response)
                     SHOULD_SYNC -> handleShouldSyncResponse(response)
+                    ADD_LANSHIELD_SESSION -> handleAddLanShieldSessionsResponse(response)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
         }, { error ->
             //NO RESPONSE
-            Log.e("TAG", "ERROR $error")
+            Log.e(TAG, "ERROR $error")
         })
         jsonRequest.setShouldRetryConnectionErrors(true)
         jsonRequest.setShouldRetryServerErrors(true)
@@ -137,6 +146,7 @@ class SendToServerWorker @AssistedInject constructor(
                 1.5f
             )
         )
+
         queue.add(jsonRequest)
 
     }
@@ -159,9 +169,7 @@ class SendToServerWorker @AssistedInject constructor(
     }
 
     private fun isVersionAllowed(appVersionsAllowed: List<String>): Boolean {
-        val packageInfo: PackageInfo =
-            applicationContext.packageManager.getPackageInfo(applicationContext.packageName, 0)
-        val versionName: String = packageInfo.versionName
+        val versionName: String = BuildConfig.VERSION_NAME
         return appVersionsAllowed.contains(versionName)
     }
 
@@ -207,22 +215,26 @@ class SendToServerWorker @AssistedInject constructor(
         CoroutineScope(Dispatchers.IO).launch {
             if (!validateUUID(appUUID)) return@launch
             val flows = response.getJSONArray("flows")
+            val flowIds = mutableListOf<UUID>()
             for (i in 0 until flows.length()) {
                 val app = flows.getJSONObject(i)
-                val flowId = app.getString("flow_uuid")
+
                 try {
+                    val flowId = UUID.fromString(app.getString("flow_uuid"))
+                    flowIds.add(flowId)
                     val timeEnd = app.getString("time_end")
                     val zonedDateTime =
                         ZonedDateTime.parse(timeEnd, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
                     val instant = zonedDateTime.toInstant()
                     val timeEndLong = instant.toEpochMilli()
                     flowDao.updateFlowsSyncedTime(flowId, timeEndLong)
-                } catch (e: JSONException) {
+                } catch (e: Exception) {
                     val message = app.getString("message")
                     Log.e("Worker", message)
                 }
 
             }
+            flowDao.removeAllScheduledForDeletionById(flowIds)
         }
     }
 
@@ -231,6 +243,30 @@ class SendToServerWorker @AssistedInject constructor(
         if (message == ACL_SUCCESS) {
             CoroutineScope(Dispatchers.IO).launch {
                 lanAccessPolicyDao.setAllSynced()
+            }
+        }
+    }
+
+
+    private fun handleAddLanShieldSessionsResponse(response: JSONObject) {
+        val appUUID = response.getString("app_installation_uuid")
+        CoroutineScope(Dispatchers.IO).launch {
+            if (!validateUUID(appUUID)) return@launch
+            val sessions = response.getJSONArray("lanshield_sessions")
+            for (i in 0 until sessions.length()) {
+                try {
+                    val session = sessions.getJSONObject(i)
+                    val sessionId = UUID.fromString(session.getString("lanshield_session_uuid"))
+                    val timeEnd = session.getString("time_end")
+                    val zonedDateTime =
+                        ZonedDateTime.parse(timeEnd, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                    val instant = zonedDateTime.toInstant()
+                    val timeEndLong = instant.toEpochMilli()
+                    lanShieldSessionDao.updateSessionsSyncedTime(sessionId, timeEndLong)
+                } catch (e: Exception) {
+                    val message = response.getString("message")
+                    Log.e(TAG, message)
+                }
             }
         }
     }
@@ -278,6 +314,25 @@ class SendToServerWorker @AssistedInject constructor(
 
         apiRequest(Request.Method.POST, ADD_ACL, jsonBody)
 
+    }
+
+    private suspend fun addLanShieldSessions(
+        sessions: List<LANShieldSession>
+    ) {
+        if(sessions.isEmpty()) return
+        val appInstallationUUID = getAppInstallationUUID() ?: return
+
+        val jsonBody = JSONObject()
+        val sessionsJSONArray = JSONArray()
+
+        for (session in sessions) {
+            val sessionJson = session.toJSON()
+            sessionsJSONArray.put(sessionJson)
+        }
+        jsonBody.put("app_installation_uuid", appInstallationUUID)
+        jsonBody.put("lanshield_sessions", sessionsJSONArray)
+
+        apiRequest(Request.Method.POST, ADD_LANSHIELD_SESSION, jsonBody)
     }
 
     private suspend fun addAppUsage(appUsage: List<UsageStats>) {

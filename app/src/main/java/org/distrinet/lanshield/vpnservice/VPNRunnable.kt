@@ -21,6 +21,7 @@ import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.Policy.ALLOW
 import org.distrinet.lanshield.Policy.BLOCK
 import org.distrinet.lanshield.Policy.DEFAULT
+import org.distrinet.lanshield.database.model.LANShieldSession
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.getPackageNameFromUid
 import tech.httptoolkit.android.TAG
@@ -45,6 +46,7 @@ class VPNRunnable(
     private val vpnNotificationManager: LANShieldNotificationManager,
     private val context: Context
 ) : Runnable {
+
 
     private val connectivityManager = context.getSystemService(VpnService.CONNECTIVITY_SERVICE) as ConnectivityManager
 

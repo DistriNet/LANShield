@@ -50,6 +50,7 @@ data class LANFlow(
     @TypeConverters(StringListConverter::class)
     var protocols: List<String>,
     val timeEndAtLastSync: Long,
+    val scheduledForDeletion: Boolean = false
 ) {
     fun toJSON(): JSONObject {
         val json = JSONObject()
