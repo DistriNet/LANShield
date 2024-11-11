@@ -13,6 +13,7 @@ import android.os.ParcelFileDescriptor
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.IOException
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
@@ -178,7 +179,11 @@ class VPNService : VpnService(), IProtectSocket {
 //        vpnThread?.join() //TODO -> shouldn't be required
         vpnThread = null
 
-        vpnInterface?.close()
+        try {
+            vpnInterface?.close()
+        }
+        catch (_: IOException) {
+        }
         vpnInterface = null
 
         setVPNRunning(false)

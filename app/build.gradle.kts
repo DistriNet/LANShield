@@ -7,18 +7,23 @@ plugins {
 
 android {
     namespace = "org.distrinet.lanshield"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "org.distrinet.lanshield"
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 4
         versionName = "0.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+        externalNativeBuild {
+            cmake {
+                cppFlags += ""
+            }
         }
     }
 
@@ -51,6 +56,12 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        }
+    }
+    externalNativeBuild {
+        cmake {
+            path = file("src/main/jni/CMakeLists.txt")
+            version = "3.22.1"
         }
     }
 }

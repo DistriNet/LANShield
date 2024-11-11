@@ -6,7 +6,12 @@ import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
+import android.os.Process.INVALID_UID
 import android.system.OsConstants
+import android.system.OsConstants.IPPROTO_ICMP
+import android.system.OsConstants.IPPROTO_ICMPV6
+import android.system.OsConstants.IPPROTO_TCP
+import android.system.OsConstants.IPPROTO_UDP
 import android.util.Log
 import android.util.SparseArray
 import androidx.lifecycle.Observer
@@ -21,10 +26,10 @@ import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.Policy.ALLOW
 import org.distrinet.lanshield.Policy.BLOCK
 import org.distrinet.lanshield.Policy.DEFAULT
+import org.distrinet.lanshield.TAG
 import org.distrinet.lanshield.database.model.LANShieldSession
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.getPackageNameFromUid
-import tech.httptoolkit.android.TAG
 import tech.httptoolkit.android.vpn.ClientPacketWriter
 import tech.httptoolkit.android.vpn.SessionHandler
 import tech.httptoolkit.android.vpn.SessionManager
@@ -35,7 +40,12 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.ConnectException
+import java.net.Inet4Address
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
+import java.util.TreeMap
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 
 // Set on our VPN as the MTU, which should guarantee all packets fit this
@@ -114,6 +124,38 @@ class VPNRunnable(
     var defaultPolicyObserver = Observer<Policy> { setDefaultForwardPolicy(it) }
     var systemAppsPolicyObserver = Observer<Policy> { setSystemAppsForwardPolicy(it) }
 
+    private fun findOpenPorts() {
+        val pm = context.packageManager
+        val wildcard = InetSocketAddress("0.0.0.0", 0)
+        val openPortsTcp : MutableMap<Int, Pair<Int, String>> = HashMap()
+        val openPortsUdp : MutableMap<Int, Pair<Int, String>> = HashMap()
+
+        for (port in 1..65535) {
+            val localAddr = InetSocketAddress("0.0.0.0", port)
+            var uid = connectivityManager.getConnectionOwnerUid(
+                IPPROTO_TCP,
+                localAddr,
+                wildcard
+            )
+            if (uid != INVALID_UID) {
+                val owner = getPackageNameFromUid(uid, pm)
+                Log.i(TAG, "Found open tcp port: $port, owner: $owner")
+                openPortsTcp[port] = Pair(uid, owner)
+            }
+            uid = connectivityManager.getConnectionOwnerUid(
+                IPPROTO_UDP,
+                localAddr,
+                wildcard
+            )
+            if (uid != INVALID_UID) {
+                val owner = getPackageNameFromUid(uid, pm)
+                Log.i(TAG, "Found open udp port: $port, owner: $owner")
+                openPortsUdp[port] = Pair(uid, owner)
+            }
+        }
+
+    }
+
 
     private fun logBlockedPacket(packet: IPHeader, packageName: String) {
         if(packet.ipVersion() == 6) return
@@ -129,6 +171,7 @@ class VPNRunnable(
     }
 
     override fun run() {
+//        findOpenPorts()
         if (threadMainLoopActive) {
             Log.w(TAG, "Vpn runnable started, but it's already running")
             return
@@ -142,10 +185,20 @@ class VPNRunnable(
         var packetLength: Int
 
         threadMainLoopActive = true
+        val packetBufferArray: ByteArray
+        try {
+            packetBufferArray = packetBuffer.array()
+        }
+        catch(_: Exception) {
+            Log.wtf(TAG,"packetBuffer not backed by array")
+            threadMainLoopActive = false
+            return
+        }
         while (threadMainLoopActive) {
             try {
                 packetBuffer.clear()
-                packetLength = vpnReadStream.read(packetBuffer.array())
+                packetLength = vpnReadStream.read(packetBufferArray, packetBuffer.arrayOffset(), MAX_PACKET_LEN)
+
                 if (packetLength > 0) {
                     try {
                         packetBuffer.limit(packetLength)
@@ -153,6 +206,11 @@ class VPNRunnable(
                         val (forwardPolicy, packageName) = shouldForwardPacket(packetHeader)
                         val shouldForward =
                             (forwardPolicy == ALLOW) or (forwardPolicy == DEFAULT && defaultForwardPolicy == ALLOW)
+                        if (packetHeader.canDoDpi() && packetHeader.protocolNumberAsOSConstant() != IPPROTO_ICMP && packetHeader.protocolNumberAsOSConstant() != IPPROTO_ICMPV6 && !packetHeader.protocolNumberAsString().contains("Hop-by-hop", ignoreCase = true) ) {
+                            val dpiResult = DpiResult()
+                            dpi.doDPI(packetBufferArray, packetLength, packetBuffer.arrayOffset(), dpiResult)
+                            Log.d(TAG, "DPI Result: " + dpiResult.protocolName + " " + dpiResult.jsonBuffer);
+                        }
 
                         if (shouldForward) {
                             packetBuffer.rewind()
@@ -180,9 +238,14 @@ class VPNRunnable(
                             Log.e(TAG, e.toString())
                         }
                     }
-                } else {
-                    // vpnReadStream should be configured as blocking
+                }
+                else if (packetLength == 0) {
                     Thread.sleep(10)
+                    Log.e(TAG, "vpnReadStream not configured as blocking!")
+                }
+                else {
+                    threadMainLoopActive = false
+                    Log.e(TAG, "TUN socket closed unexpected")
                 }
             } catch (e: InterruptedException) {
                 Log.i(TAG, "Sleep interrupted: " + e.message)
@@ -193,7 +256,7 @@ class VPNRunnable(
                 stop()
             }
         }
-        Log.i(TAG, "Vpn thread shutting down")
+        Log.d(TAG, "Vpn thread shutting down")
     }
 
     private fun getPacketOwnerUid(pkt: IPHeader): Int {
@@ -206,7 +269,6 @@ class VPNRunnable(
         } catch (e: IllegalArgumentException) {
             -1
         }
-
     }
 
 
