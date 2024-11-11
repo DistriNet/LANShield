@@ -228,6 +228,7 @@ public class PacketUtil {
 			odd = true;
 		}
 		ByteBuffer buffer = ByteBuffer.allocate(buffersize);
+		buffer.order(ByteOrder.BIG_ENDIAN);
 		buffer.put(pseudoTcpHeader);
 
 		//add actual header + data
