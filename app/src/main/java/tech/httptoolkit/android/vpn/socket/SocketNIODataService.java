@@ -196,6 +196,7 @@ public class SocketNIODataService implements Runnable {
 				session.setConnected(connected);
 				session.getFlow().setTcpEstablishedReached(session.getFlow().getTcpEstablishedReached() || connected);
 				updateFlow(session.getFlow());
+				//TODO send syn ack to VPN here
 			} else {
 				throw new IllegalStateException("TCP channels must either be connected or pending connection");
 			}

@@ -199,7 +199,8 @@ public class IPv4Header extends IPHeader {
     }
 
     public ByteBuffer getTcpPseudoHeader(short tcplength) {
-        ByteBuffer buffer = ByteBuffer.allocate(tcplength + 4 + 4 * 2);
+//        ByteBuffer buffer = ByteBuffer.allocate(tcplength + 4 + 4 * 2); //TODO double check this, also for IPv6
+        ByteBuffer buffer = ByteBuffer.allocate(4 + 4 * 2);
         buffer.order(ByteOrder.BIG_ENDIAN);
         buffer.put(sourceIP.getBytes());
         buffer.put(destinationIP.getBytes());
