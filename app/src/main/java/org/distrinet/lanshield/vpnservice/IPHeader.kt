@@ -4,9 +4,9 @@ import android.system.OsConstants
 import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import kotlin.experimental.and
 
 class IPHeader(packetBuffer: ByteBuffer) {
     lateinit var source: InetSocketAddress
@@ -14,28 +14,31 @@ class IPHeader(packetBuffer: ByteBuffer) {
     private var protocol: Int = 0
     private val ipVersion: Int
     var size = 0
+    private var canDoDpi = false
 
 
     init {
         require(packetBuffer.limit() >= 24)
-        val rawPacket = packetBuffer.order(ByteOrder.BIG_ENDIAN)
-        rawPacket.position(0)
-        ipVersion = rawPacket.getShort().toInt().ushr(12)
+        ipVersion = packetBuffer.get(0).and(0xf0.toByte()).toInt().ushr(4)
 
         when (ipVersion) {
             4 -> {
-                parseIPHeader(rawPacket, 4, 12, 9, 20, 4)
+                parseIPHeader(packetBuffer, 4, 12, 9, 20, 4)
             }
 
             6 -> {
-                require(rawPacket.limit() >= 44)
-                parseIPHeader(rawPacket, 16, 8, 6, 40, 6)
+                require(packetBuffer.limit() >= 44)
+                parseIPHeader(packetBuffer, 16, 8, 6, 40, 6)
             }
 
             else -> {
                 throw IllegalArgumentException("Invalid IP version: $ipVersion")
             }
         }
+    }
+
+    public fun canDoDpi(): Boolean {
+        return canDoDpi
     }
 
     private fun parseInetAddress(rawPacket: ByteBuffer, addressSize: Int): InetAddress {
@@ -61,12 +64,10 @@ class IPHeader(packetBuffer: ByteBuffer) {
 
         size = if (version == 4) {
             val totalLengthOffset = 2
-            rawPacket.position(totalLengthOffset)
-            rawPacket.short.toInt()
+            rawPacket.getShort(totalLengthOffset).toInt()
         } else {
             val payloadLengthOffset = 4
-            rawPacket.position(payloadLengthOffset)
-            val payloadLength = rawPacket.short.toInt() and 0xFFFF
+            val payloadLength = rawPacket.getShort(payloadLengthOffset).toInt() and 0xFFFF
             val ipv6HeaderLength = 40 // IPv6 header is always 40 bytes
             payloadLength + ipv6HeaderLength
         }
@@ -82,6 +83,22 @@ class IPHeader(packetBuffer: ByteBuffer) {
 
         source = InetSocketAddress(sourceIp, sourcePort)
         destination = InetSocketAddress(destinationIp, destinationPort)
+
+        if (protocol == 6) { //TCP
+            val ipHeaderLength = if (version == 4) {
+                rawPacket.get(0).toInt().and(0x0F) * 4
+            } else {
+                40
+            }
+            val dataOffsetAndNs: Int = rawPacket.get(ipHeaderLength + 12).toInt()
+            val tcpHeaderLength = dataOffsetAndNs.and(0xF0).shr(4) * 4
+
+            canDoDpi = ipHeaderLength + tcpHeaderLength < size
+        }
+        else {
+            canDoDpi = true
+        }
+
     }
 
     fun protocolNumberAsString(): String {

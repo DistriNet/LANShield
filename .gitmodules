@@ -1,0 +1,3 @@
+[submodule "submodules/nDPI"]
+	path = submodules/nDPI
+	url = https://github.com/emanuele-f/nDPI.git
