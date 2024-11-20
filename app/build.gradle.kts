@@ -17,8 +17,8 @@ android {
         applicationId = "org.distrinet.lanshield"
         minSdk = 29
         targetSdk = 34
-        versionCode = 5
-        versionName = "0.5"
+        versionCode = 8
+        versionName = "0.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
