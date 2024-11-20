@@ -194,10 +194,10 @@ class VPNService : VpnService(), IProtectSocket {
     }
 
     private fun setVPNRunning(isRunning: Boolean) {
-        if (isRunning) {
-            vpnServiceStatus.value = VPN_SERVICE_STATUS.ENABLED
+        vpnServiceStatus.value = if (isRunning) {
+            VPN_SERVICE_STATUS.ENABLED
         } else {
-            vpnServiceStatus.value = VPN_SERVICE_STATUS.DISABLED
+            VPN_SERVICE_STATUS.DISABLED
         }
         isVPNRunning = isRunning
     }
@@ -318,8 +318,6 @@ class VPNService : VpnService(), IProtectSocket {
         }
         vpnThread!!.start()
         setVPNRunning(true)
-
-
     }
 
     private fun updateAlwaysOnStatus() {

@@ -50,12 +50,15 @@ data class LANFlow(
     @TypeConverters(StringListConverter::class)
     var protocols: List<String>,
     val timeEndAtLastSync: Long,
-    val scheduledForDeletion: Boolean = false
+    val scheduledForDeletion: Boolean = false,
+    var dpiReport: String? = null,
+    var dpiProtocol: String? = null
 ) {
+
     fun toJSON(): JSONObject {
         val json = JSONObject()
         json.put("flow_uuid", uuid)
-        json.put("app_id", appId)
+        json.put("app_id", appId ?: PACKAGE_NAME_UNKNOWN)
         json.put("time_start", convertMillisToRFC8601(timeStart))
         json.put("time_end", convertMillisToRFC8601(timeEnd))
         json.put("remote_ip", remoteEndpoint.toString().removePrefix("/"))
@@ -69,6 +72,8 @@ data class LANFlow(
         json.put("data_ingress", dataIngress)
         json.put("detected_protocols", protocols.joinToString(","))
         json.put("time_end_at_last_sync", timeEndAtLastSync)
+        json.put("dpi_report", dpiReport ?: "{}")
+        json.put("dpi_protocol", dpiProtocol ?: "")
 
         if (transportLayerProtocol.contentEquals("TCP")) {
             json.put("tcp_established_reached", tcpEstablishedReached)
@@ -96,7 +101,7 @@ data class LANFlow(
     companion object {
 
         fun createFlow(
-            appId: String,
+            appId: String?,
             remoteEndpoint: InetSocketAddress,
             localEndpoint: InetSocketAddress,
             transportLayerProtocol: String,
@@ -125,50 +130,25 @@ data class LANFlow(
 
         fun fromHttpToolkitSession(
             session: Session,
-            connectivityManager: ConnectivityManager,
-            packageManager: PackageManager,
+            packageName: String?,
         ): LANFlow {
 
-            Log.w(TAG, "creating flow fromHttpToolkitSession")
             if (session.flow != null) {
                 throw IllegalArgumentException("Passed session already has an associated flow.")
             }
-            Log.w(TAG, "creating flow fromHttpToolkitSession: init variables")
             val localIp = InetAddress.getByAddress(session.sourceIp.bytes)
             val remoteIp = InetAddress.getByAddress(session.destIp.bytes)
             val localEndpoint = InetSocketAddress(localIp, session.sourcePort)
             val remoteEndpoint = InetSocketAddress(remoteIp, session.destPort)
 
-            var appId = PACKAGE_NAME_UNKNOWN
-            Log.w(TAG, "creating flow fromHttpToolkitSession: variables init done")
-
-
-            if (session.protocol.name.contentEquals("UDP") || session.protocol.name.contentEquals("TCP")) {
-                Log.w(TAG, "creating flow fromHttpToolkitSession: trying to get appUid")
-                var protocol = 6
-                if (session.protocol.name.contentEquals("UDP")) {
-                    protocol = 17
-                }
-                val appUid = connectivityManager.getConnectionOwnerUid(
-                    protocol,
-                    localEndpoint,
-                    remoteEndpoint
-                )
-                Log.w(TAG, "creating flow fromHttpToolkitSession: got appUid")
-                appId = getPackageNameFromUid(appUid, packageManager)
-            }
-
-            Log.w(TAG, "creating flow fromHttpToolkitSession: calling createFlow")
-
             val flow = createFlow(
-                appId = appId,
+                appId = packageName,
                 remoteEndpoint = remoteEndpoint,
                 localEndpoint = localEndpoint,
                 transportLayerProtocol = session.protocol.name,
                 appliedPolicy = Policy.ALLOW
             )
             session.flow = flow
-            Log.w(TAG, "creating flow fromHttpToolkitSession returning")
             return flow
         }
 

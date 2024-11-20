@@ -15,6 +15,7 @@ import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
+import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineScope
@@ -132,9 +133,11 @@ class SendToServerWorker @AssistedInject constructor(
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
+                FirebaseCrashlytics.getInstance().recordException(e)
             }
         }, { error ->
             //NO RESPONSE
+            FirebaseCrashlytics.getInstance().recordException(error)
             Log.e(TAG, "ERROR $error")
         })
         jsonRequest.setShouldRetryConnectionErrors(true)
@@ -158,7 +161,8 @@ class SendToServerWorker @AssistedInject constructor(
             shouldSync = response.getBoolean("should_sync")
             appVersionsAllowed = response.getString("app_versions").split(",")
         } catch (e: JSONException) {
-            Log.e("Worker", "JSONException")
+            Log.e(TAG, e.toString())
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
         if (shouldSync && isVersionAllowed(appVersionsAllowed)) {
             runBlocking {
@@ -182,26 +186,38 @@ class SendToServerWorker @AssistedInject constructor(
     }
 
     private fun handleAppUsageResponse(response: JSONObject) {
-        val message = response.getString("message")
-        if (message == APP_USAGE_SUCCESS) {
-            runBlocking {
-                dataStore.edit {
-                    it[TIME_OF_LAST_SYNC] = Calendar.getInstance().timeInMillis
+        try {
+            val message = response.getString("message")
+            if (message == APP_USAGE_SUCCESS) {
+                runBlocking {
+                    dataStore.edit {
+                        it[TIME_OF_LAST_SYNC] = Calendar.getInstance().timeInMillis
+                    }
                 }
             }
         }
+        catch (e: Exception) {
+            Log.e(TAG, e.toString())
+            FirebaseCrashlytics.getInstance().recordException(e)
+        }
+
     }
 
     private fun handleAppInstallationUUIDResponse(response: JSONObject) {
-        val uuidsString = response.getString("app_installation_uuid")
         try {
+            val uuidsString = response.getString("app_installation_uuid")
             val validateUUID: UUID = UUID.fromString(uuidsString)
             runBlocking {
                 dataStore.edit { it[APP_INSTALLATION_UUID] = uuidsString }
                 sendRequestsRequiringUUID()
             }
-        } catch (exception: IllegalArgumentException) {
-            Log.d("Worker", "UUID is of wrong format")
+        } catch (e: IllegalArgumentException) {
+            Log.d(TAG, "UUID is of wrong format $e")
+            FirebaseCrashlytics.getInstance().recordException(e)
+        }
+        catch (e: JSONException) {
+            Log.e(TAG, e.toString())
+            FirebaseCrashlytics.getInstance().recordException(e)
         }
 
     }
@@ -229,8 +245,8 @@ class SendToServerWorker @AssistedInject constructor(
                     val timeEndLong = instant.toEpochMilli()
                     flowDao.updateFlowsSyncedTime(flowId, timeEndLong)
                 } catch (e: Exception) {
-                    val message = app.getString("message")
-                    Log.e("Worker", message)
+                    FirebaseCrashlytics.getInstance().recordException(e)
+                    Log.e(TAG, e.toString())
                 }
 
             }
@@ -239,12 +255,19 @@ class SendToServerWorker @AssistedInject constructor(
     }
 
     private fun handleACLResponse(response: JSONObject) {
-        val message = response.getString("message")
-        if (message == ACL_SUCCESS) {
-            CoroutineScope(Dispatchers.IO).launch {
-                lanAccessPolicyDao.setAllSynced()
+        try {
+            val message = response.getString("message")
+            if (message == ACL_SUCCESS) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    lanAccessPolicyDao.setAllSynced()
+                }
             }
         }
+        catch (e: Exception) {
+            FirebaseCrashlytics.getInstance().recordException(e)
+            Log.e(TAG, e.toString())
+        }
+
     }
 
 
@@ -264,8 +287,8 @@ class SendToServerWorker @AssistedInject constructor(
                     val timeEndLong = instant.toEpochMilli()
                     lanShieldSessionDao.updateSessionsSyncedTime(sessionId, timeEndLong)
                 } catch (e: Exception) {
-                    val message = response.getString("message")
-                    Log.e(TAG, message)
+                    FirebaseCrashlytics.getInstance().recordException(e)
+                    Log.e(TAG, e.toString())
                 }
             }
         }
@@ -308,9 +331,9 @@ class SendToServerWorker @AssistedInject constructor(
         jsonBody.put("app_installation_uuid", appInstallationUUID)
 
 
-        jsonBody.put("allowlist", allowedUnsyncedApps)
-        jsonBody.put("blocklist", blockedUnsyncedApps)
-        jsonBody.put("defaultlist", defaultUnsyncedApps)
+        jsonBody.put("allowlist", JSONArray(allowedUnsyncedApps.orEmpty()))
+        jsonBody.put("blocklist", JSONArray(blockedUnsyncedApps.orEmpty()))
+        jsonBody.put("defaultlist", JSONArray(defaultUnsyncedApps.orEmpty()))
 
         apiRequest(Request.Method.POST, ADD_ACL, jsonBody)
 

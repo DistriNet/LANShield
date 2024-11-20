@@ -121,39 +121,46 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun scheduleBackendSync() {
-        val constraints: Constraints =
-            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-        val periodicWorkRequest = PeriodicWorkRequest.Builder(
-            SendToServerWorker::class.java,
-            BACKEND_SYNC_INTERVAL_DAYS, // repeat interval in x days
-            TimeUnit.DAYS
-        ).setConstraints(constraints).build()
+        val production = true;
+        if(production) {
+            val constraints: Constraints =
+                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            val periodicWorkRequest = PeriodicWorkRequest.Builder(
+                SendToServerWorker::class.java,
+                BACKEND_SYNC_INTERVAL_DAYS, // repeat interval in x days
+                TimeUnit.DAYS
+            ).setConstraints(constraints).build()
+
+            val workManager = WorkManager.getInstance(this)
+
+            workManager.enqueueUniquePeriodicWork(
+                "lanshieldSyncWorker",
+                ExistingPeriodicWorkPolicy.KEEP,
+                periodicWorkRequest
+            )
+        }
+        else {
+            //        TODO: Following is for testing without waiting
+        val constraints: Constraints = Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()
+
+        val oneTimeWorkRequest = OneTimeWorkRequest.Builder(SendToServerWorker::class.java)
+            .setConstraints(constraints)
+            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+            .build()
 
         val workManager = WorkManager.getInstance(this)
 
-        workManager.enqueueUniquePeriodicWork(
-            "lanshieldSyncWorker",
-            ExistingPeriodicWorkPolicy.KEEP,
-            periodicWorkRequest
+        workManager.enqueueUniqueWork(
+            "backendSyncWorkerTest",  // Give a unique name for the test worker
+            ExistingWorkPolicy.REPLACE,  // Use REPLACE to ensure the work is run immediately
+            oneTimeWorkRequest
         )
-//        TODO: Following is for testing without waiting
-//        val constraints: Constraints = Constraints.Builder()
-//            .setRequiredNetworkType(NetworkType.CONNECTED)
-//            .build()
-//
-//        val oneTimeWorkRequest = OneTimeWorkRequest.Builder(SendToServerWorker::class.java)
-//            .setConstraints(constraints)
-//            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-//            .build()
-//
-//        val workManager = WorkManager.getInstance(this)
-//
-//        workManager.enqueueUniqueWork(
-//            "backendSyncWorkerTest",  // Give a unique name for the test worker
-//            ExistingWorkPolicy.REPLACE,  // Use REPLACE to ensure the work is run immediately
-//            oneTimeWorkRequest
-//        )
+        }
+
+
     }
 
     private suspend fun setDataStoreDefaults() {

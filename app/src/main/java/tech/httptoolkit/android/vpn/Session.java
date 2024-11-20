@@ -20,6 +20,7 @@ import android.util.Log;
 
 import org.distrinet.lanshield.database.model.LANFlow;
 
+import kotlinx.coroutines.sync.Mutex;
 import tech.httptoolkit.android.vpn.transport.ip.IPAddress;
 import tech.httptoolkit.android.vpn.transport.ip.IPHeader;
 import tech.httptoolkit.android.vpn.socket.ICloseSession;
@@ -111,7 +112,7 @@ public class Session {
 	public long connectionStartTime = 0;
 
 	private final ICloseSession sessionCloser;
-	
+
 	Session(
 		SessionProtocol protocol,
 		IPAddress sourceIp,

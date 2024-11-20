@@ -16,7 +16,6 @@ class IPHeader(packetBuffer: ByteBuffer) {
     var size = 0
     private var canDoDpi = false
 
-
     init {
         require(packetBuffer.limit() >= 24)
         ipVersion = packetBuffer.get(0).and(0xf0.toByte()).toInt().ushr(4)
@@ -37,7 +36,7 @@ class IPHeader(packetBuffer: ByteBuffer) {
         }
     }
 
-    public fun canDoDpi(): Boolean {
+    public fun hasPayloadForDpi(): Boolean {
         return canDoDpi
     }
 
@@ -128,6 +127,7 @@ class IPHeader(packetBuffer: ByteBuffer) {
 
     fun protocolNumberAsOSConstant(): Int {
         return when (protocol) {
+            0 -> IPPROTO_HOPOPTS
             1 -> OsConstants.IPPROTO_ICMP
             6 -> OsConstants.IPPROTO_TCP
             17 -> OsConstants.IPPROTO_UDP
@@ -149,5 +149,7 @@ class IPHeader(packetBuffer: ByteBuffer) {
         fun csvHeader(): String {
             return "date;packageName;transportProto;transportProtoStr;sourceIP;sourcePort;destinationIP;destinationPort;"
         }
+
+        public val IPPROTO_HOPOPTS = 0
     }
 }
