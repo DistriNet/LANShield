@@ -43,9 +43,9 @@ abstract class AppDatabase : RoomDatabase() {
 
 val MIGRATION_1_2 = object : Migration(1, 2) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("CREATE TABLE `lanshield_session` (`uuid` TEXT NOT NULL, `timeStart` INTEGER NOT NULL, `timeEnd` INTEGER NOT NULL, `timeEndAtLastSync` INTEGER NOT NULL, PRIMARY KEY(`uuid`))")
-        db.execSQL("ALTER TABLE `flow` ADD COLUMN `scheduledForDeletion` INTEGER NOT NULL")
-        db.execSQL("UPDATE `flow` SET `scheduledForDeletion` = 0 WHERE `scheduledForDeletion` IS NULL")
+        db.execSQL("CREATE TABLE `lanshield_session` (`uuid` BLOB NOT NULL, `timeStart` INTEGER NOT NULL, `timeEnd` INTEGER NOT NULL, `timeEndAtLastSync` INTEGER NOT NULL, PRIMARY KEY(`uuid`))")
+        db.execSQL("ALTER TABLE `flow` ADD COLUMN `scheduledForDeletion` INTEGER NOT NULL DEFAULT undefined")
+        db.execSQL("UPDATE `flow` SET `scheduledForDeletion` = 0 WHERE `scheduledForDeletion` = 'undefined'")
 
         db.execSQL("ALTER TABLE `flow` ADD COLUMN `dpiReport` TEXT")
         db.execSQL("ALTER TABLE `flow` ADD COLUMN `dpiProtocol` TEXT")

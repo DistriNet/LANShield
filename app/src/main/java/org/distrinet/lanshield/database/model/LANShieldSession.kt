@@ -13,7 +13,6 @@ import java.util.UUID
 @Entity(tableName = "lanshield_session")
 data class LANShieldSession(
     @PrimaryKey
-    @TypeConverters(StringUUIDConverter::class)
     val uuid: UUID,
     val timeStart: Long,
     var timeEnd: Long,

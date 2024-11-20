@@ -28,11 +28,10 @@ import java.util.UUID
 
 
 @Entity(tableName = "flow")
-@TypeConverters(InetSocketAddressConverter::class, StringListConverter::class, StringUUIDConverter::class)
+@TypeConverters(InetSocketAddressConverter::class, StringListConverter::class)
 data class LANFlow(
     val appId: String?,
     @PrimaryKey
-    @TypeConverters(StringUUIDConverter::class)
     val uuid: UUID,
     @TypeConverters(InetSocketAddressConverter::class)
     val remoteEndpoint: InetSocketAddress,
