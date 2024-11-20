@@ -26,7 +26,8 @@ android {
         }
         externalNativeBuild {
             cmake {
-                cppFlags += ""
+                cppFlags += "-g"
+                cFlags += "-g"
             }
         }
     }
