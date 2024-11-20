@@ -26,6 +26,8 @@ import android.util.SparseArray;
 
 import org.distrinet.lanshield.database.AppDatabase;
 import org.distrinet.lanshield.database.model.LANFlow;
+import org.distrinet.lanshield.vpnservice.DpiResult;
+import org.distrinet.lanshield.vpnservice.VPNRunnable;
 import org.jetbrains.annotations.NotNull;
 
 import tech.httptoolkit.android.TagKt;
@@ -57,14 +59,9 @@ public class SessionManager implements ICloseSession {
     private final Map<String, Session> table = new ConcurrentHashMap<>();
     private final SocketProtector protector = SocketProtector.getInstance();
 
-    private final ConnectivityManager connectivityManager;
-    private final PackageManager packageManager;
-
     private final AppDatabase appDatabase;
 
-    public SessionManager(ConnectivityManager connectivityManager, PackageManager packageManager, AppDatabase appDatabase) {
-        this.connectivityManager = connectivityManager;
-        this.packageManager = packageManager;
+    public SessionManager(AppDatabase appDatabase) {
         this.appDatabase = appDatabase;
     }
 
@@ -160,7 +157,7 @@ public class SessionManager implements ICloseSession {
     }
 
     @NotNull
-    public Session createNewUDPSession(IPAddress ip, int port,IPAddress srcIp, int srcPort, int length) throws IOException {
+    public Session createNewUDPSession(IPAddress ip, int port,IPAddress srcIp, int srcPort, int length, String packageName, ByteBuffer rawPacket) throws IOException {
         String keys = Session.getSessionKey(SessionProtocol.UDP, ip, port, srcIp, srcPort);
 
         Log.w(TAG, "CREATE UDP SESSION");
@@ -183,30 +180,28 @@ public class SessionManager implements ICloseSession {
 
         // Initiate connection early to reduce latency
         SocketAddress socketAddress = createUdpAddress(ip, port);
-        Log.d(TAG, "initialized connection to remote UDP server: " + ip + ":" +
-                port + " from " + srcIp + ":" + srcPort);
 
         channel.connect(socketAddress);
         session.setConnected(channel.isConnected());
 
         table.put(keys, session);
 
-        Log.w(TAG, "CREATE UDP SESSION: before insert");
-        LANFlow lanFlow = LANFlow.Companion.fromHttpToolkitSession(session, connectivityManager, packageManager);
+        LANFlow lanFlow = LANFlow.Companion.fromHttpToolkitSession(session, packageName);
         lanFlow.increaseEgress(1, length);
 
-        Log.w(TAG, "CREATE UDP SESSION: flow created");
+        DpiResult dpiResult = VPNRunnable.Companion.doDpi(rawPacket.array(), rawPacket.limit(), rawPacket.arrayOffset());
+        if(dpiResult != null) {
+            lanFlow.setDpiReport(dpiResult.getJsonBuffer());
+            lanFlow.setDpiProtocol(dpiResult.getProtocolName());
+        }
         Log.w(TAG, lanFlow.toJSON().toString());
         this.appDatabase.FlowDao().insertFlow(lanFlow);
-        Log.w(TAG, "CREATE UDP SESSION: after insert");
 
-
-        Log.d(TAG, "new UDP session successfully created.");
         return session;
     }
 
     @NotNull
-    public Session createNewTCPSession(IPAddress ip, int port, IPAddress srcIp, int srcPort, int length) throws IOException {
+    public Session createNewTCPSession(IPAddress ip, int port, IPAddress srcIp, int srcPort, int length, String packageName) throws IOException {
         String key = Session.getSessionKey(SessionProtocol.TCP, ip, port, srcIp, srcPort);
 
         Session existingSession = table.get(key);
@@ -245,7 +240,7 @@ public class SessionManager implements ICloseSession {
         boolean connected = channel.connect(socketAddress);
         session.setConnected(connected);
 
-        LANFlow lanFlow = LANFlow.Companion.fromHttpToolkitSession(session, connectivityManager, packageManager);
+        LANFlow lanFlow = LANFlow.Companion.fromHttpToolkitSession(session, packageName);
         lanFlow.increaseEgress(1, length);
         lanFlow.setTcpEstablishedReached(connected);
         this.appDatabase.FlowDao().insertFlow(lanFlow);

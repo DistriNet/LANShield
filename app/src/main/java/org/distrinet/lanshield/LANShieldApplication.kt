@@ -42,9 +42,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 const val FEEDBACK_URL = "https://forms.gle/zh2J3KMzZjMnv2Qi9"
-const val STUDY_MORE_INFO_URL = "https://lanshield.eu"
+const val STUDY_MORE_INFO_URL = "https://lanshield.eu/user-study"
 const val ABOUT_LANSHIELD_URL = "https://lanshield.eu"
-const val PRIVACY_POLICY_URL = "https://lanshield.eu"
+const val PRIVACY_POLICY_URL = "https://lanshield.eu/privacy-policy"
 
 val NO_SYSTEM_OVERRIDE_PACKAGE_NAMES = listOf("com.android.chrome")
 

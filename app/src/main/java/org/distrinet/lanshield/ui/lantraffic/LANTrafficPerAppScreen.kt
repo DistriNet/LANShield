@@ -123,6 +123,7 @@ internal fun LANTrafficPerAppScreenPreview() {
     )
 
     lanFlow.protocols = listOf("HTTP", "SSDP")
+    lanFlow.dpiProtocol = "HTTP"
 
     LANTrafficPerAppScreen(
         lanFlows = listOf(lanFlow),
@@ -243,21 +244,16 @@ internal fun CardLANFlow(modifier: Modifier = Modifier, lanFlow: LANFlow) {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(text = stringResource(R.string.in_with_amount_bytes, bytesIncoming))
                 Text(text = stringResource(R.string.out_with_amount_bytes, bytesOutgoing))
-                if (lanFlow.protocols.isNotEmpty() && !lanFlow.protocols[0].contentEquals("")) {
-                    val protocolsText = when {
-                        lanFlow.protocols.size == 1 -> stringResource(
-                            R.string.detected_protocol,
-                            lanFlow.protocols[0]
-                        )
-                        else -> stringResource(
-                            R.string.detected_protocols,
-                            lanFlow.protocols.joinToString(" ")
-                        )
-                    }
-                    Text(text = protocolsText)
+            }
+            val protocol = lanFlow.dpiProtocol ?: "Unknown" // nDPI will report 'Unknown' if no protocol is detected, don't change this
+            if (!protocol.contentEquals("Unknown")) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(text = stringResource(
+                        R.string.detected_protocol,
+                        lanFlow.dpiProtocol ?: "",
+                    ))
                 }
             }
-
         }
     }
 }

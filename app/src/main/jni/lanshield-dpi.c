@@ -119,19 +119,12 @@ static void free_dpi() {
     }
 }
 
-JNIEXPORT void JNICALL
-Java_org_distrinet_lanshield_vpnservice_dpi_00024Companion_terminateNDPI(JNIEnv *env,
-                                                                         jobject thiz) {
-    free_dpi();
-}
-
-
 JNIEXPORT jint JNICALL
-Java_org_distrinet_lanshield_vpnservice_dpi_00024Companion_doDPI(JNIEnv *env, jobject thiz,
-                                                                 jbyteArray packet,
-                                                                 jint packet_size,
-                                                                 jint packet_offset,
-                                                                 jobject dpi_result) {
+Java_org_distrinet_lanshield_vpnservice_VPNRunnable_00024Companion__1doDPI(JNIEnv *env, jobject thiz,
+                                                                           jbyteArray packet,
+                                                                           jint packet_size,
+                                                                           jint packet_offset,
+                                                                           jobject dpi_result) {
     uint8_t protocol_was_guessed;
 
     if (ndpi_module == NULL) {
@@ -176,4 +169,10 @@ Java_org_distrinet_lanshield_vpnservice_dpi_00024Companion_doDPI(JNIEnv *env, jo
     (*env)->DeleteLocalRef(env, protocolNameJava);
 
     return 0;
-    }
+}
+
+JNIEXPORT void JNICALL
+Java_org_distrinet_lanshield_vpnservice_VPNRunnable_00024Companion_terminateNDPI(JNIEnv *env,
+                                                                                 jobject thiz) {
+    free_dpi();
+}

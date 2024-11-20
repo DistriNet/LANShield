@@ -16,6 +16,8 @@
 
 package tech.httptoolkit.android.vpn;
 
+import static kotlinx.coroutines.CoroutineScopeKt.CoroutineScope;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
@@ -42,6 +44,11 @@ import tech.httptoolkit.android.vpn.util.PacketUtil;
 import androidx.annotation.NonNull;
 import android.util.Log;
 
+import org.distrinet.lanshield.database.AppDatabase;
+import org.distrinet.lanshield.database.model.LANFlow;
+import org.distrinet.lanshield.vpnservice.DpiResult;
+import org.distrinet.lanshield.vpnservice.VPNRunnable;
+
 import tech.httptoolkit.android.TagKt;
 
 /**
@@ -58,10 +65,14 @@ public class SessionHandler {
 
 	private final ExecutorService pingThreadpool;
 
-	public SessionHandler(SessionManager manager, SocketNIODataService nioService, ClientPacketWriter writer) {
+	private final AppDatabase appDatabase;
+
+
+	public SessionHandler(SessionManager manager, SocketNIODataService nioService, ClientPacketWriter writer, AppDatabase appDatabase) {
 		this.manager = manager;
 		this.nioService = nioService;
 		this.writer = writer;
+		this.appDatabase = appDatabase;
 
 		// Pool of threads to synchronously proxy ICMP ping requests in the background. We need to
 		// carefully limit these, or a ping flood can cause us big big problems.
@@ -78,17 +89,14 @@ public class SessionHandler {
 	 *
 	 * @param stream ByteBuffer to be read
 	 */
-	public void handlePacket(@NonNull ByteBuffer stream) throws PacketHeaderException, IOException {
-		final byte[] rawPacket = new byte[stream.limit()];
-		stream.get(rawPacket, 0, stream.limit());
+	public void handlePacket(@NonNull ByteBuffer stream, String packageName) throws PacketHeaderException, IOException {
 		stream.rewind();
-
 		final IPHeader ipHeader = IPPacketFactory.createIPHeader(stream);
 
 		if (ipHeader.getProtocol() == IPProtocol.TCP) {
-			handleTCPPacket(stream, ipHeader);
+			handleTCPPacket(stream, ipHeader, packageName);
 		} else if (ipHeader.getProtocol() == IPProtocol.UDP) {
-			handleUDPPacket(stream, ipHeader);
+			handleUDPPacket(stream, ipHeader, packageName);
 		} else if (ipHeader.getProtocol() == IPProtocol.ICMP) {
 			handleICMPPacket(stream, ipHeader);
 		} else {
@@ -96,7 +104,7 @@ public class SessionHandler {
 		}
 	}
 
-	private void handleUDPPacket(ByteBuffer clientPacketData, IPHeader ipHeader) throws PacketHeaderException, IOException {
+	private void handleUDPPacket(ByteBuffer clientPacketData, IPHeader ipHeader, String packageName) throws PacketHeaderException, IOException {
 		UDPHeader udpheader = UDPPacketFactory.createUDPHeader(clientPacketData);
 
 		Session session = manager.getSession(
@@ -113,7 +121,7 @@ public class SessionHandler {
 			session = manager.createNewUDPSession(
 				ipHeader.getDestinationIP(), udpheader.getDestinationPort(),
 				ipHeader.getSourceIP(), udpheader.getSourcePort(),
-					ipHeader.getTotalLength()
+					ipHeader.getTotalLength(), packageName, clientPacketData
 			);
 		}
 
@@ -134,7 +142,7 @@ public class SessionHandler {
 		manager.keepSessionAlive(session);
 	}
 
-	private void handleTCPPacket(ByteBuffer clientPacketData, IPHeader ipHeader) throws PacketHeaderException, IOException {
+	private void handleTCPPacket(ByteBuffer clientPacketData, IPHeader ipHeader, String packageName) throws PacketHeaderException, IOException {
 		TCPHeader tcpheader = TCPPacketFactory.createTCPHeader(clientPacketData);
 		int dataLength = clientPacketData.limit() - clientPacketData.position();
 		IPAddress sourceIP = ipHeader.getSourceIP();
@@ -144,7 +152,7 @@ public class SessionHandler {
 
 		if (tcpheader.isSYN()) {
 			// 3-way handshake + create new session
-			replySynAck(ipHeader,tcpheader);
+			replySynAck(ipHeader,tcpheader, packageName);
 		} else if(tcpheader.isACK()) {
 			String key = Session.getSessionKey(SessionProtocol.TCP, destinationIP, destinationPort, sourceIP, sourcePort);
 			Session session = manager.getSessionByKey(key);
@@ -163,6 +171,8 @@ public class SessionHandler {
 			synchronized (session) {
 				session.setLastIpHeader(ipHeader);
 				session.setLastTcpHeader(tcpheader);
+				LANFlow lanFlow = session.getFlow();
+
 
 				//any data from client?
 				if (dataLength > 0) {
@@ -171,6 +181,15 @@ public class SessionHandler {
 						int addedLength = manager.addClientData(clientPacketData, session);
 						//send ack to client only if new data was added
 						sendAck(ipHeader, tcpheader, addedLength, session);
+						if(lanFlow != null && (lanFlow.getDpiProtocol() == null || lanFlow.getDpiReport() == null)) {
+							//Should not necessarily do this on first ack
+							DpiResult dpiResult = VPNRunnable.Companion.doDpi(clientPacketData.array(), clientPacketData.limit(), clientPacketData.arrayOffset());
+							if(dpiResult != null) {
+								lanFlow.setDpiReport(dpiResult.getJsonBuffer());
+								lanFlow.setDpiProtocol(dpiResult.getProtocolName());
+								appDatabase.FlowDao().updateFlow(lanFlow);
+							}
+						}
 					} else {
 						sendAckForDisorder(ipHeader, tcpheader, dataLength);
 					}
@@ -388,7 +407,7 @@ public class SessionHandler {
 	 * @param ip IP
 	 * @param tcp TCP
 	 */
-	private void replySynAck(IPHeader ip, TCPHeader tcp) throws IOException {
+	private void replySynAck(IPHeader ip, TCPHeader tcp, String packageName) throws IOException {
 		Packet packet = TCPPacketFactory.createSynAckPacketData(ip, tcp);
 		
 		TCPHeader tcpheader = (TCPHeader) packet.getTransportHeader();
@@ -396,7 +415,7 @@ public class SessionHandler {
 		Session session = manager.createNewTCPSession(
 			ip.getDestinationIP(), tcp.getDestinationPort(),
 			ip.getSourceIP(), tcp.getSourcePort(),
-				ip.getTotalLength()
+				ip.getTotalLength(), packageName
 		);
 
 		if (session.getLastIpHeader() != null) {

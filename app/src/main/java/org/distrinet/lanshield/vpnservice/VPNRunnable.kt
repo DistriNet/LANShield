@@ -1,15 +1,10 @@
 package org.distrinet.lanshield.vpnservice
 
 import android.content.Context
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.os.Process.INVALID_UID
-import android.system.OsConstants
-import android.system.OsConstants.IPPROTO_ICMP
-import android.system.OsConstants.IPPROTO_ICMPV6
 import android.system.OsConstants.IPPROTO_TCP
 import android.system.OsConstants.IPPROTO_UDP
 import android.util.Log
@@ -17,36 +12,30 @@ import android.util.SparseArray
 import androidx.lifecycle.Observer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Runnable
 import kotlinx.coroutines.launch
 import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
-import org.distrinet.lanshield.database.AppDatabase
-import org.distrinet.lanshield.database.model.LANFlow
-import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.Policy.ALLOW
 import org.distrinet.lanshield.Policy.BLOCK
 import org.distrinet.lanshield.Policy.DEFAULT
 import org.distrinet.lanshield.TAG
-import org.distrinet.lanshield.database.model.LANShieldSession
+import org.distrinet.lanshield.database.AppDatabase
+import org.distrinet.lanshield.database.model.LANFlow
+import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.getPackageNameFromUid
 import tech.httptoolkit.android.vpn.ClientPacketWriter
 import tech.httptoolkit.android.vpn.SessionHandler
 import tech.httptoolkit.android.vpn.SessionManager
 import tech.httptoolkit.android.vpn.socket.SocketNIODataService
-import tech.httptoolkit.android.vpn.transport.PacketHeaderException
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.ConnectException
-import java.net.Inet4Address
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.util.TreeMap
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-
 
 // Set on our VPN as the MTU, which should guarantee all packets fit this
 const val MAX_PACKET_LEN = 1500
@@ -57,6 +46,36 @@ class VPNRunnable(
     private val context: Context
 ) : Runnable {
 
+    companion object {
+        init {
+            System.loadLibrary("lanshield-dpi")
+        }
+
+        private val dpiLock = Any()
+
+        private external fun _doDPI(packet: ByteArray, packetSize: Int, packetOffset : Int, dpiResult: DpiResult): Int
+
+        external fun terminateNDPI()
+
+        fun doDpi(packet: ByteArray, packetSize: Int, packetOffset: Int): DpiResult? {
+            val dpiResult = DpiResult()
+            return synchronized(dpiLock) {
+                try {
+                    val res = _doDPI(packet, packetSize, packetOffset, dpiResult)
+                    if (res == 0) {
+                        Log.d(TAG, "Dpi result: $dpiResult")
+                        dpiResult
+                    } else {
+                        null
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Error during DPI: ${e.message}")
+                    null
+                }
+            }
+        }
+    }
+
 
     private val connectivityManager = context.getSystemService(VpnService.CONNECTIVITY_SERVICE) as ConnectivityManager
 
@@ -65,24 +84,18 @@ class VPNRunnable(
 
     private val appDatabase = AppDatabase.getDatabase(context)
 
-
     private val vpnReadStream = FileInputStream(vpnInterface.fileDescriptor)
     private val vpnWriteStream = FileOutputStream(vpnInterface.fileDescriptor)
 
     private val vpnPacketWriterRunnable = ClientPacketWriter(vpnWriteStream)
     private val vpnPacketWriterThread = Thread(vpnPacketWriterRunnable)
 
-    // Background service & task for non-blocking socket
     private val nioServiceRunnable = SocketNIODataService(vpnPacketWriterRunnable, appDatabase)
     private val dataServiceThread = Thread(nioServiceRunnable, "Socket NIO thread")
 
-    private val httpToolkitSessionManager = SessionManager(
-        context.getSystemService(VpnService.CONNECTIVITY_SERVICE) as ConnectivityManager,
-        context.packageManager,
-        appDatabase
-    )
+    private val httpToolkitSessionManager = SessionManager(appDatabase)
     private val httpToolkitSessionHandler =
-        SessionHandler(httpToolkitSessionManager, nioServiceRunnable, vpnPacketWriterRunnable)
+        SessionHandler(httpToolkitSessionManager, nioServiceRunnable, vpnPacketWriterRunnable, appDatabase)
 
     // Allocate the buffer for a single packet.
     private val packetBuffer = ByteBuffer.allocate(MAX_PACKET_LEN)
@@ -157,14 +170,18 @@ class VPNRunnable(
     }
 
 
-    private fun logBlockedPacket(packet: IPHeader, packageName: String) {
-        if(packet.ipVersion() == 6) return
+    private fun logBlockedPacket(packetHeader: IPHeader, rawPacket: ByteBuffer, packageName: String) {
         val lanFlow = LANFlow.createFlow(
-            appId = packageName, remoteEndpoint = packet.destination, localEndpoint = packet.source,
-            transportLayerProtocol = packet.protocolNumberAsString(), appliedPolicy = BLOCK
+            appId = packageName, remoteEndpoint = packetHeader.destination, localEndpoint = packetHeader.source,
+            transportLayerProtocol = packetHeader.protocolNumberAsString(), appliedPolicy = BLOCK
         )
-        lanFlow.dataEgress = packet.size.toLong()
+        lanFlow.dataEgress = packetHeader.size.toLong()
         lanFlow.packetCountEgress = 1
+        val dpiResult = getDpiResult(packetHeader, rawPacket)
+        if(dpiResult != null) {
+            lanFlow.dpiReport = dpiResult.jsonBuffer
+            lanFlow.dpiProtocol = dpiResult.protocolName
+        }
         CoroutineScope(Dispatchers.IO).launch {
             appDatabase.FlowDao().insertFlow(lanFlow)
         }
@@ -179,6 +196,8 @@ class VPNRunnable(
 
         Log.i(TAG, "Vpn thread starting")
         httpToolkitSessionManager.setTcpPortRedirections(SparseArray())
+        dataServiceThread.priority = Thread.NORM_PRIORITY
+        vpnPacketWriterThread.priority = Thread.NORM_PRIORITY
         dataServiceThread.start()
         vpnPacketWriterThread.start()
 
@@ -204,19 +223,14 @@ class VPNRunnable(
                         packetBuffer.limit(packetLength)
                         val packetHeader = IPHeader(packetBuffer)
                         val (forwardPolicy, packageName) = shouldForwardPacket(packetHeader)
+
                         val shouldForward =
                             (forwardPolicy == ALLOW) or (forwardPolicy == DEFAULT && defaultForwardPolicy == ALLOW)
-                        if (packetHeader.canDoDpi() && packetHeader.protocolNumberAsOSConstant() != IPPROTO_ICMP && packetHeader.protocolNumberAsOSConstant() != IPPROTO_ICMPV6 && !packetHeader.protocolNumberAsString().contains("Hop-by-hop", ignoreCase = true) ) {
-                            val dpiResult = DpiResult()
-                            dpi.doDPI(packetBufferArray, packetLength, packetBuffer.arrayOffset(), dpiResult)
-                            Log.d(TAG, "DPI Result: " + dpiResult.protocolName + " " + dpiResult.jsonBuffer);
-                        }
-
+                        packetBuffer.rewind()
                         if (shouldForward) {
-                            packetBuffer.rewind()
-                            httpToolkitSessionHandler.handlePacket(packetBuffer)
+                            httpToolkitSessionHandler.handlePacket(packetBuffer, packageName)
                         } else {
-                            logBlockedPacket(packetHeader, packageName)
+                            logBlockedPacket(packetHeader, packetBuffer, packageName)
                         }
 
                     } catch (e: Exception) {
@@ -230,9 +244,7 @@ class VPNRunnable(
                                     (e is ConnectException && errorMessage.contains("ENETUNREACH")) ||
                                     // Too many open files - can't make more sockets, not much we can do:
                                     (e is ConnectException && errorMessage == "Too many open files") ||
-                                    (e is ConnectException && errorMessage.contains("EMFILE")) ||
-                                    // IPv6 is not supported here yet:
-                                    (e is PacketHeaderException && errorMessage.contains("IP version should be 4 but was 6"))
+                                    (e is ConnectException && errorMessage.contains("EMFILE"))
 
                         if (!isIgnorable) {
                             Log.e(TAG, e.toString())
@@ -241,7 +253,7 @@ class VPNRunnable(
                 }
                 else if (packetLength == 0) {
                     Thread.sleep(10)
-                    Log.e(TAG, "vpnReadStream not configured as blocking!")
+                    Log.wtf(TAG, "vpnReadStream not configured as blocking!")
                 }
                 else {
                     threadMainLoopActive = false
@@ -259,25 +271,42 @@ class VPNRunnable(
         Log.d(TAG, "Vpn thread shutting down")
     }
 
-    private fun getPacketOwnerUid(pkt: IPHeader): Int {
-        return try {
-            connectivityManager.getConnectionOwnerUid(
-                pkt.protocolNumberAsOSConstant(),
-                pkt.source,
-                pkt.destination
-            )
-        } catch (e: IllegalArgumentException) {
-            -1
+    private fun getDpiResult(
+        packetHeader: IPHeader,
+        packetRaw: ByteBuffer,
+    ): DpiResult? {
+        if (packetHeader.protocolNumberAsOSConstant() == IPPROTO_UDP
+            || (packetHeader.protocolNumberAsOSConstant() == IPPROTO_TCP && packetHeader.hasPayloadForDpi())
+        ) {
+            return doDpi(packetRaw.array(), packetRaw.limit(), packetRaw.arrayOffset())
         }
+        return null
     }
 
+    private fun getPacketOwnerUid(pkt: IPHeader): Int {
+        repeat(5) {
+            try {
+                val uid = connectivityManager.getConnectionOwnerUid(
+                    pkt.protocolNumberAsOSConstant(),
+                    pkt.source,
+                    pkt.destination
+                )
+                if(uid != 0 && uid != -1) {
+                    return uid
+                }
 
+            } catch (e: IllegalArgumentException) {
+                return -1
+            }
+        }
+        return -1
+    }
 
     private fun shouldForwardPacket(packetHeader: IPHeader): Pair<Policy, String> {
 
         val transportLayerProtocol = packetHeader.protocolNumberAsOSConstant()
-        val canLookupAppUid = transportLayerProtocol == OsConstants.IPPROTO_TCP
-                || transportLayerProtocol == OsConstants.IPPROTO_UDP
+        val canLookupAppUid = transportLayerProtocol == IPPROTO_TCP
+                || transportLayerProtocol == IPPROTO_UDP
         if (!canLookupAppUid) {
             // We can only lookup the app's uid for TCP and UDP packets.
             // For other protocols we use the default policy.
@@ -317,10 +346,10 @@ class VPNRunnable(
 
             vpnPacketWriterRunnable.shutdown()
             vpnPacketWriterThread.interrupt()
-
-
         } else {
             Log.w(TAG, "Vpn runnable stopped, but it's not running")
         }
     }
 }
+
+data class DpiResult(var jsonBuffer: String? = null, var protocolName: String? = null)
