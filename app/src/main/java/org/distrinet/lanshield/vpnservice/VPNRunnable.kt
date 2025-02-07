@@ -107,6 +107,18 @@ class VPNRunnable(
     @Volatile
     private var systemAppsForwardPolicy = ALLOW
 
+    @Volatile
+    private var allowMulticast = false
+
+    @Volatile
+    private var allowDns = false
+
+    @Volatile
+    private var hideMulticastNot = false
+
+    @Volatile
+    private var hideDnsNot = false
+
     @Synchronized
     fun setDefaultForwardPolicy(policy: Policy) {
         defaultForwardPolicy = policy
@@ -136,6 +148,10 @@ class VPNRunnable(
 
     var defaultPolicyObserver = Observer<Policy> { setDefaultForwardPolicy(it) }
     var systemAppsPolicyObserver = Observer<Policy> { setSystemAppsForwardPolicy(it) }
+    var allowMulticastObserver = Observer<Boolean> { allowMulticast = it }
+    var allowDnsObserver = Observer<Boolean> { allowDns = it }
+    var hideMulticastNotObserver = Observer<Boolean> { hideMulticastNot = it }
+    var hideDnsNotObserver = Observer<Boolean> { hideDnsNot = it }
 
     private fun findOpenPorts() {
         val pm = context.packageManager
@@ -303,7 +319,6 @@ class VPNRunnable(
     }
 
     private fun shouldForwardPacket(packetHeader: IPHeader): Pair<Policy, String> {
-
         val transportLayerProtocol = packetHeader.protocolNumberAsOSConstant()
         val canLookupAppUid = transportLayerProtocol == IPPROTO_TCP
                 || transportLayerProtocol == IPPROTO_UDP
@@ -311,6 +326,17 @@ class VPNRunnable(
             // We can only lookup the app's uid for TCP and UDP packets.
             // For other protocols we use the default policy.
             return Pair(DEFAULT, PACKAGE_NAME_UNKNOWN)
+        }
+
+        val ipAddress = packetHeader.destination.address
+        if (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") {
+            val policy = if (defaultForwardPolicy == BLOCK && !allowMulticast) BLOCK else ALLOW
+            return Pair(policy, PACKAGE_NAME_UNKNOWN)
+        }
+
+        if (packetHeader.destination.port == 53) {
+            val policy = if (defaultForwardPolicy == BLOCK && !allowDns) BLOCK else ALLOW
+            return Pair(policy, PACKAGE_NAME_UNKNOWN)
         }
 
         val appUid = getPacketOwnerUid(packetHeader)
@@ -331,7 +357,11 @@ class VPNRunnable(
                     DEFAULT -> defaultForwardPolicy
                     else -> appliedPolicy
                 }
-                vpnNotificationManager.postNotification(packageName = appPackageName, notificationPolicy, packetHeader.destination)
+                val isDnsNotificationHidden = defaultForwardPolicy == ALLOW && packetHeader.destination.port == 53 && hideDnsNot
+                val isMulticastNotificationHidden = defaultForwardPolicy == ALLOW && (packetHeader.destination.address.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") && hideMulticastNot
+                if (!isDnsNotificationHidden && !isMulticastNotificationHidden) {
+                    vpnNotificationManager.postNotification(packageName = appPackageName, notificationPolicy, packetHeader.destination)
+                }
             }
             return Pair(appliedPolicy, appPackageName)
         }

@@ -28,6 +28,11 @@ import org.distrinet.lanshield.DEFAULT_POLICY_KEY
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.SERVICE_NOTIFICATION_CHANNEL_ID
 import org.distrinet.lanshield.SYSTEM_APPS_POLICY_KEY
+import org.distrinet.lanshield.ALLOW_MULTICAST
+import org.distrinet.lanshield.ALLOW_DNS
+import org.distrinet.lanshield.HIDE_DNS_NOT
+import org.distrinet.lanshield.HIDE_MULTICAST_NOT
+import org.distrinet.lanshield.MainActivity
 import org.distrinet.lanshield.VPN_SERVICE_STATUS
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.database.model.LanAccessPolicy
@@ -51,6 +56,10 @@ class VPNService : VpnService(), IProtectSocket {
     private lateinit var accessPolicies: LiveData<List<LanAccessPolicy>>
     private lateinit var defaultForwardPolicyLive: LiveData<Policy>
     private lateinit var systemAppsForwardPolicyLive: LiveData<Policy>
+    private lateinit var allowMulticastLive: LiveData<Boolean>
+    private lateinit var allowDnsLive: LiveData<Boolean>
+    private lateinit var hideMulticastNotLive: LiveData<Boolean>
+    private lateinit var hideDnsNotLive: LiveData<Boolean>
 
     private var isVPNRunning = false
 
@@ -90,6 +99,24 @@ class VPNService : VpnService(), IProtectSocket {
                 it[SYSTEM_APPS_POLICY_KEY] ?: Policy.DEFAULT.toString()
             )
         }.distinctUntilChanged().asLiveData()
+
+        allowMulticastLive = dataStore.data.map {
+            it[ALLOW_MULTICAST] ?: false
+        }.distinctUntilChanged().asLiveData()
+
+        allowDnsLive = dataStore.data.map {
+            it[ALLOW_DNS] ?: false
+        }.distinctUntilChanged().asLiveData()
+
+        hideMulticastNotLive = dataStore.data.map {
+            it[HIDE_MULTICAST_NOT] ?: false
+        }.distinctUntilChanged().asLiveData()
+
+        hideDnsNotLive = dataStore.data.map {
+            it[HIDE_DNS_NOT] ?: false
+        }.distinctUntilChanged().asLiveData()
+
+
         accessPolicies = lanAccessPolicyDao.getAllLive()
 
         updateAlwaysOnStatus()
@@ -152,12 +179,21 @@ class VPNService : VpnService(), IProtectSocket {
         val stopPendingIntent: PendingIntent =
             PendingIntent.getService(this, 0, stopIntent, PendingIntent.FLAG_IMMUTABLE)
 
+        val openAppIntent = Intent(this, MainActivity::class.java)
+        openAppIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+
+        val openAppPendingIntent = PendingIntent.getActivity(
+            this, 0, openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
         // Build the notification using NotificationCompat.Builder
         return NotificationCompat.Builder(this, SERVICE_NOTIFICATION_CHANNEL_ID)
             .setContentText(getString(R.string.app_name) + " enabled")
             .setSmallIcon(R.mipmap.logo_foreground)
             .setShowWhen(false)
             .setOngoing(true)
+            .setContentIntent(openAppPendingIntent)
             .addAction(
                 R.mipmap.logo_foreground,
                 "Stop LANShield",
@@ -307,7 +343,10 @@ class VPNService : VpnService(), IProtectSocket {
         accessPolicies.observeForever(vpnRunnable!!.accessPoliesObserver)
         defaultForwardPolicyLive.observeForever(vpnRunnable!!.defaultPolicyObserver)
         systemAppsForwardPolicyLive.observeForever(vpnRunnable!!.systemAppsPolicyObserver)
-
+        allowMulticastLive.observeForever(vpnRunnable!!.allowMulticastObserver)
+        allowDnsLive.observeForever(vpnRunnable!!.allowDnsObserver)
+        hideMulticastNotLive.observeForever(vpnRunnable!!.hideMulticastNotObserver)
+        hideDnsNotLive.observeForever(vpnRunnable!!.hideDnsNotObserver)
 
         vpnThread = Thread(vpnRunnable, "VPN thread")
 
