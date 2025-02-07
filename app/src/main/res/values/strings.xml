@@ -78,6 +78,12 @@
     <string name="overview_vpn_permission_info_dialog">For protecting your LAN traffic, LANShield needs to set up a virtual local VPN interface. In the next step you\'ll be asked to grant this permission to LANShield. No VPN connection to the outside internet will be made.</string>
     <string name="peer">Peer: %1$s - %2$s</string>
     <string name="per_app_exceptions">Per app exceptions</string>
+
+    <string name="allow_multicast_traffic">Allow Multicast Traffic</string>
+    <string name="allow_dns_traffic">Allow DNS Traffic</string>
+    <string name="hide_multicast_notification">Hide Multicast notifications</string>
+    <string name="hide_dns_notification">Hide DNS notifications</string>
+
     <string name="per_app_policies_info">"Here you can configure whether you want to block or allow LAN traffic on a per app basis."</string>
     <string name="policy_allow_lan_traffic">Policy: allow LAN traffic</string>
     <string name="policy_block_lan_traffic">Policy: block LAN traffic</string>

@@ -12,6 +12,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.distrinet.lanshield.AUTOSTART_ENABLED
+import org.distrinet.lanshield.ALLOW_MULTICAST
+import org.distrinet.lanshield.ALLOW_DNS
+import org.distrinet.lanshield.HIDE_MULTICAST_NOT
+import org.distrinet.lanshield.HIDE_DNS_NOT
 import org.distrinet.lanshield.DEFAULT_POLICY_KEY
 import org.distrinet.lanshield.SHARE_APP_USAGE_KEY
 import org.distrinet.lanshield.SHARE_LAN_METRICS_KEY
@@ -27,6 +31,16 @@ class SettingsViewModel @Inject constructor(val dataStore: DataStore<Preferences
         dataStore.data.map { it[SHARE_LAN_METRICS_KEY] ?: false }.distinctUntilChanged()
     val shareAppUsageEnabled =
         dataStore.data.map { it[SHARE_APP_USAGE_KEY] ?: false }.distinctUntilChanged()
+
+    val allowMulticast = dataStore.data.map { it[ALLOW_MULTICAST] ?: false }.distinctUntilChanged()
+
+    val allowDns = dataStore.data.map { it[ALLOW_DNS] ?: false }.distinctUntilChanged()
+
+    val hideMulticastNot = dataStore.data.map { it[HIDE_MULTICAST_NOT] ?: false }.distinctUntilChanged()
+
+    val hideDnsNot = dataStore.data.map { it[HIDE_DNS_NOT] ?: false }.distinctUntilChanged()
+
+
     val defaultPolicy =
         dataStore.data.map { Policy.valueOf(it[DEFAULT_POLICY_KEY] ?: Policy.DEFAULT.toString()) }
             .distinctUntilChanged()
@@ -65,5 +79,21 @@ class SettingsViewModel @Inject constructor(val dataStore: DataStore<Preferences
 
     fun onChangeAutoStart(enabled: Boolean) {
         writeToDataStore(AUTOSTART_ENABLED, enabled)
+    }
+
+    fun onChangeAllowMulticast(enabled: Boolean) {
+        writeToDataStore(ALLOW_MULTICAST, enabled)
+    }
+
+    fun onChangeAllowDns(enabled: Boolean) {
+        writeToDataStore(ALLOW_DNS, enabled)
+    }
+
+    fun onChangeHideMulticastNot(enabled: Boolean) {
+        writeToDataStore(HIDE_MULTICAST_NOT, enabled)
+    }
+
+    fun onChangeHideDnsNot(enabled: Boolean) {
+        writeToDataStore(HIDE_DNS_NOT, enabled)
     }
 }

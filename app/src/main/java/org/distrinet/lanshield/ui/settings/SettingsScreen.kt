@@ -86,6 +86,12 @@ internal fun SettingsRoute(
     val defaultPolicy by viewModel.defaultPolicy.collectAsStateWithLifecycle(initialValue = Policy.DEFAULT)
     val systemAppsPolicy by viewModel.systemAppsPolicy.collectAsStateWithLifecycle(initialValue = Policy.DEFAULT)
 
+    val isAllowMulticastEnabled by viewModel.allowMulticast.collectAsStateWithLifecycle(false)
+    val isAllowDnsEnabled by viewModel.allowDns.collectAsStateWithLifecycle(false)
+    val isHideMulticastNot by viewModel.hideMulticastNot.collectAsStateWithLifecycle(false)
+    val isHideDnsNot by viewModel.hideDnsNot.collectAsStateWithLifecycle(false)
+
+
     var showGrantAppUsageDialog by remember { mutableStateOf(false) }
 
 
@@ -115,7 +121,15 @@ internal fun SettingsRoute(
         systemAppsPolicy = systemAppsPolicy,
         onChangeSystemAppsPolicy = { viewModel.onChangeSystemAppsPolicy(it) },
         onChangeAutoStart = { viewModel.onChangeAutoStart(it) },
-        isAutoStartEnabled = isAutoStartEnabled
+        isAutoStartEnabled = isAutoStartEnabled,
+        isAllowMulticastEnabled = isAllowMulticastEnabled,
+        onChangeAllowMulticast = { viewModel.onChangeAllowMulticast(it) },
+        isAllowDnsEnabled = isAllowDnsEnabled,
+        onChangeAllowDns = { viewModel.onChangeAllowDns(it) },
+        isHideMulticastNot = isHideMulticastNot,
+        onChangeMulticastNot = { viewModel.onChangeHideMulticastNot(it) },
+        isHideDnsNot = isHideDnsNot,
+        onChangeDnsNot = { viewModel.onChangeHideDnsNot(it) },
     )
 }
 
@@ -366,7 +380,15 @@ internal fun SettingsScreenPreview() {
         systemAppsPolicy = Policy.ALLOW,
         onChangeSystemAppsPolicy = {},
         isAutoStartEnabled = true,
-        onChangeAutoStart = {}
+        onChangeAutoStart = {},
+        isAllowMulticastEnabled = false,
+        onChangeAllowMulticast = {},
+        isAllowDnsEnabled = false,
+        onChangeAllowDns = {},
+        isHideDnsNot = false,
+        onChangeDnsNot = {},
+        isHideMulticastNot = false,
+        onChangeMulticastNot = {}
     )
 }
 
@@ -387,6 +409,14 @@ internal fun SettingsScreen(
     onConfirmGrantAppUsageDialog: () -> Unit,
     isAutoStartEnabled: Boolean,
     onChangeAutoStart: (Boolean) -> Unit,
+    isAllowMulticastEnabled: Boolean,
+    onChangeAllowMulticast: (Boolean) -> Unit,
+    isAllowDnsEnabled: Boolean,
+    onChangeAllowDns: (Boolean) -> Unit,
+    isHideDnsNot: Boolean,
+    onChangeDnsNot: (Boolean) -> Unit,
+    isHideMulticastNot: Boolean,
+    onChangeMulticastNot: (Boolean) -> Unit,
 ) {
 
     var showLanBlockingMoreInfoDialog by remember { mutableStateOf(false) }
@@ -442,6 +472,38 @@ internal fun SettingsScreen(
                         text = stringResource(R.string.system_apps),
                         policy = systemAppsPolicy,
                         onChangePolicy = onChangeSystemAppsPolicy
+                    )
+                }
+                AnimatedVisibility(visible = defaultPolicy == Policy.BLOCK) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    SettingsSwitchComp(
+                        name = R.string.allow_multicast_traffic,
+                        isChecked = isAllowMulticastEnabled,
+                        onCheckedChange = onChangeAllowMulticast
+                    )
+                }
+                AnimatedVisibility(visible = defaultPolicy == Policy.BLOCK) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    SettingsSwitchComp(
+                        name = R.string.allow_dns_traffic,
+                        isChecked = isAllowDnsEnabled,
+                        onCheckedChange = onChangeAllowDns
+                    )
+                }
+                AnimatedVisibility(visible = defaultPolicy == Policy.ALLOW) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    SettingsSwitchComp(
+                        name = R.string.hide_multicast_notification,
+                        isChecked = isHideMulticastNot,
+                        onCheckedChange = onChangeMulticastNot
+                    )
+                }
+                AnimatedVisibility(visible = defaultPolicy == Policy.ALLOW) {
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    SettingsSwitchComp(
+                        name = R.string.hide_dns_notification,
+                        isChecked = isHideDnsNot,
+                        onCheckedChange = onChangeDnsNot
                     )
                 }
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
