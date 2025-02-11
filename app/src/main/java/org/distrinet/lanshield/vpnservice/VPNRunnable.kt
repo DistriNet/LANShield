@@ -319,6 +319,7 @@ class VPNRunnable(
     }
 
     private fun shouldForwardPacket(packetHeader: IPHeader): Pair<Policy, String> {
+
         val transportLayerProtocol = packetHeader.protocolNumberAsOSConstant()
         val canLookupAppUid = transportLayerProtocol == IPPROTO_TCP
                 || transportLayerProtocol == IPPROTO_UDP
@@ -328,44 +329,51 @@ class VPNRunnable(
             return Pair(DEFAULT, PACKAGE_NAME_UNKNOWN)
         }
 
-        val ipAddress = packetHeader.destination.address
-        if (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") {
-            val policy = if (defaultForwardPolicy == BLOCK && !allowMulticast) BLOCK else ALLOW
-            return Pair(policy, PACKAGE_NAME_UNKNOWN)
-        }
-
-        if (packetHeader.destination.port == 53) {
-            val policy = if (defaultForwardPolicy == BLOCK && !allowDns) BLOCK else ALLOW
-            return Pair(policy, PACKAGE_NAME_UNKNOWN)
-        }
-
         val appUid = getPacketOwnerUid(packetHeader)
         val hasValidUid = appUid != -1 && appUid != 1000 && appUid != 0
+        val ipAddress = packetHeader.destination.address
 
         if (hasValidUid) {
             val appPackageName = getPackageNameFromUid(appUid, context.packageManager)
 
-            val exceptionPolicy = accessPoliciesCache.getOrDefault(appPackageName, DEFAULT)
+            val perAppPolicy = accessPoliciesCache.getOrDefault(appPackageName, DEFAULT)
             val isSystemApp = getPackageMetadata(appPackageName, context).isSystem
-            var appliedPolicy = exceptionPolicy
+            var appliedPolicy = perAppPolicy
 
-            if(exceptionPolicy == DEFAULT) {
-                if(defaultForwardPolicy != ALLOW && isSystemApp) {
+            if(perAppPolicy == DEFAULT) {
+                if(defaultForwardPolicy != ALLOW && isSystemApp) { // System app
                     appliedPolicy = systemAppsForwardPolicy
                 }
-                val notificationPolicy = when(appliedPolicy) {
-                    DEFAULT -> defaultForwardPolicy
-                    else -> appliedPolicy
+                if (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") { // Multicast
+                    val multicastPolicy = if (defaultForwardPolicy == BLOCK && !allowMulticast) BLOCK else ALLOW
+                    appliedPolicy = if(appliedPolicy == ALLOW) ALLOW else multicastPolicy
                 }
+                if (packetHeader.destination.port == 53) { // DNS
+                    val dnsPolicy = if (defaultForwardPolicy == BLOCK && !allowDns) BLOCK else ALLOW
+                    appliedPolicy = if(appliedPolicy == ALLOW) ALLOW else dnsPolicy
+                }
+
                 val isDnsNotificationHidden = defaultForwardPolicy == ALLOW && packetHeader.destination.port == 53 && hideDnsNot
                 val isMulticastNotificationHidden = defaultForwardPolicy == ALLOW && (packetHeader.destination.address.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") && hideMulticastNot
+
                 if (!isDnsNotificationHidden && !isMulticastNotificationHidden) {
-                    vpnNotificationManager.postNotification(packageName = appPackageName, notificationPolicy, packetHeader.destination)
+                    vpnNotificationManager.postNotification(packageName = appPackageName, appliedPolicy, packetHeader.destination)
                 }
             }
             return Pair(appliedPolicy, appPackageName)
         }
-        return Pair(DEFAULT, PACKAGE_NAME_UNKNOWN)
+        else {
+            if (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") {
+                val policy = if (defaultForwardPolicy == BLOCK && !allowMulticast) BLOCK else ALLOW
+                return Pair(policy, PACKAGE_NAME_UNKNOWN)
+            }
+
+            if (packetHeader.destination.port == 53) {
+                val policy = if (defaultForwardPolicy == BLOCK && !allowDns) BLOCK else ALLOW
+                return Pair(policy, PACKAGE_NAME_UNKNOWN)
+            }
+            return Pair(DEFAULT, PACKAGE_NAME_UNKNOWN)
+        }
     }
 
     fun stop() {
