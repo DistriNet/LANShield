@@ -458,7 +458,21 @@ internal fun SettingsScreen(
             }
 
             SettingsGroup(
-                name = R.string.lan_traffic_blocking,
+                name = R.string.general) {
+                SettingsClickableComp(
+                    name = R.string.manage_notifications,
+                    icon = LANShieldIcons.ChevronRight,
+                    iconDesc = R.string.manage_notifications,
+                    onClick = { startActivity(context, manageNotificationsIntent, null) }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                SettingsSwitchComp(
+                    name = R.string.automatically_start_on_boot,
+                    isChecked = isAutoStartEnabled,
+                    onCheckedChange = onChangeAutoStart,
+                )
+            }
+            SettingsGroup(name = R.string.lan_traffic_blocking,
                 showMoreInfo = true,
                 onMoreInfoClick = { showLanBlockingMoreInfoDialog = true }) {
                 SettingsPolicy(
@@ -474,6 +488,13 @@ internal fun SettingsScreen(
                         onChangePolicy = onChangeSystemAppsPolicy
                     )
                 }
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                SettingsClickableComp(
+                    name = R.string.per_app_exceptions,
+                    icon = LANShieldIcons.ChevronRight,
+                    iconDesc = R.string.per_app_exceptions,
+                    onClick = navigateToPerAppExceptions
+                )
                 AnimatedVisibility(visible = defaultPolicy == Policy.BLOCK) {
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     SettingsSwitchComp(
@@ -506,26 +527,6 @@ internal fun SettingsScreen(
                         onCheckedChange = onChangeDnsNot
                     )
                 }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsClickableComp(
-                    name = R.string.per_app_exceptions,
-                    icon = LANShieldIcons.ChevronRight,
-                    iconDesc = R.string.per_app_exceptions,
-                    onClick = navigateToPerAppExceptions
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsClickableComp(
-                    name = R.string.manage_notifications,
-                    icon = LANShieldIcons.ChevronRight,
-                    iconDesc = R.string.manage_notifications,
-                    onClick = { startActivity(context, manageNotificationsIntent, null) }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsSwitchComp(
-                    name = R.string.automatically_start_on_boot,
-                    isChecked = isAutoStartEnabled,
-                    onCheckedChange = onChangeAutoStart,
-                )
             }
             SettingsGroup(name = R.string.join_our_academic_study_by_ku_leuven) {
                 var icon: ImageVector? = null

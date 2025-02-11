@@ -54,7 +54,7 @@
     <string name="join_our_academic_study_by_ku_leuven">Join our academic study by KU Leuven</string>
     <string name="lan_traffic">LAN Traffic</string>
     <string name="lan_traffic_blocking">LAN traffic blocking</string>
-    <string name="lan_traffic_blocking_info">Here you can configure how LANShield should block or allow LAN traffic. In the \'Per app exceptions\' page, you can set rules for every individual app on your device. If no rule is set, the \'Default policy\' is applied. LANShield also allows you to block LAN access of system apps. We advice against doing so, since this might break some functionality.</string>
+    <string name="lan_traffic_blocking_info">Here you can configure how LANShield should block or allow LAN traffic. In the \'Per app exceptions\' page, you can set rules for every individual app on your device. If no rule is set, the \'Default policy\' is applied. We advice against blocking system apps, since this might break some functionality.</string>
     <string name="lan_traffic_from_with_package_name">LAN traffic from %1$s</string>
     <string name="lan_traffic_info">Here you can see an overview of all apps that have sent or received LAN traffic. In some cases, LANShield is not able to detect which app caused certain packets to be sent; these are categorized under \'Unknown\'.</string>
     <string name="lanshield_enabled">LANShield enabled</string>
@@ -108,4 +108,6 @@
     <string name="vpn_permission_request">VPN permission request</string>
     <string name="you_re_all_set">You\'re all set!</string>
     <string name="export">Export LAN Traffic</string>
+    <string name="advanced">Advanced</string>
+    <string name="general">General</string>
 </resources>
