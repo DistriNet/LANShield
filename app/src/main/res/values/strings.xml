@@ -79,6 +79,12 @@
     <string name="peer">Peer: %1$s - %2$s</string>
     <string name="per_app_exceptions">Per app exceptions</string>
 
+    <string name="preflight_success_title">Preflight Check Succeeded</string>
+    <string name="preflight_success_text">LAN access preflight for %1$s succeeded. LAN traffic will be allowed.</string>
+
+    <string name="preflight_failure_title">Preflight Check Failed</string>
+    <string name="preflight_failure_text">LAN access preflight for %1$s failed. LAN traffic will be blocked.</string>
+
     <string name="allow_multicast_traffic">Allow Multicast Traffic</string>
     <string name="allow_dns_traffic">Allow DNS Traffic</string>
     <string name="hide_multicast_notification">Hide Multicast notifications</string>

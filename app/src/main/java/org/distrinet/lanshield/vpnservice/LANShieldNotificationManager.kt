@@ -139,6 +139,33 @@ class LANShieldNotificationManager(private val context: Context) {
             notificationManager.notify(activeNotification.notificationId, notification)
         }
 
+        fun postPreflightSuccessNotification(message: String) {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val title = "Preflight Success"
+            val builder = NotificationCompat.Builder(context, "Preflight Detected")
+                .setSmallIcon(android.R.drawable.stat_sys_upload_done) // replace with your icon resource
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+            // Generate a unique notification ID or use a fixed one if you want a single persistent notification.
+            val notificationId = (System.currentTimeMillis() % 10000).toInt()
+            notificationManager.notify(notificationId, builder.build())
+        }
+
+        fun postPreflightFailureNotification(message: String) {
+            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val title = "Preflight Failure"
+            val builder = NotificationCompat.Builder(context, "Preflight Detected")
+                .setSmallIcon(android.R.drawable.stat_notify_error) // replace with your icon resource
+                .setContentTitle(title)
+                .setContentText(message)
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setAutoCancel(true)
+            val notificationId = (System.currentTimeMillis() % 10000).toInt()
+            notificationManager.notify(notificationId, builder.build())
+        }
+
     fun createNotificationChannels() {
 
         val serviceChannel = NotificationChannel(

@@ -25,6 +25,9 @@ import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.getPackageNameFromUid
+import org.distrinet.lanshield.pna.PnaManager
+import java.net.URL
+import java.util.Locale
 import tech.httptoolkit.android.vpn.ClientPacketWriter
 import tech.httptoolkit.android.vpn.SessionHandler
 import tech.httptoolkit.android.vpn.SessionManager
@@ -344,26 +347,56 @@ class VPNRunnable(
 
         if (hasValidUid) {
             val appPackageName = getPackageNameFromUid(appUid, context.packageManager)
-
             val exceptionPolicy = accessPoliciesCache.getOrDefault(appPackageName, DEFAULT)
             val isSystemApp = getPackageMetadata(appPackageName, context).isSystem
-            var appliedPolicy = exceptionPolicy
 
-            if(exceptionPolicy == DEFAULT) {
-                if(defaultForwardPolicy != ALLOW && isSystemApp) {
-                    appliedPolicy = systemAppsForwardPolicy
-                }
-                val notificationPolicy = when(appliedPolicy) {
-                    DEFAULT -> defaultForwardPolicy
-                    else -> appliedPolicy
-                }
-                val isDnsNotificationHidden = defaultForwardPolicy == ALLOW && packetHeader.destination.port == 53 && hideDnsNot
-                val isMulticastNotificationHidden = defaultForwardPolicy == ALLOW && (packetHeader.destination.address.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") && hideMulticastNot
-                if (!isDnsNotificationHidden && !isMulticastNotificationHidden) {
-                    vpnNotificationManager.postNotification(packageName = appPackageName, notificationPolicy, packetHeader.destination)
-                }
+            // If an explicit per-app policy is set (ALLOW or BLOCK), honor it immediately.
+            if (exceptionPolicy != DEFAULT) {
+                return Pair(exceptionPolicy, appPackageName)
             }
-            return Pair(appliedPolicy, appPackageName)
+
+            var appliedPolicy = defaultForwardPolicy
+            if (defaultForwardPolicy != ALLOW && isSystemApp) {
+                appliedPolicy = systemAppsForwardPolicy
+            }
+
+            // App-specific policy is DEFAULT: use the Global policy.
+            // If global default is ALLOW, forward immediately.
+            if (appliedPolicy  == ALLOW) {
+                val notificationPolicy = defaultForwardPolicy
+                val isDnsNotificationHidden = defaultForwardPolicy == ALLOW &&
+                        (packetHeader.destination.port == 53) && hideDnsNot
+                val isMulticastNotificationHidden = defaultForwardPolicy == ALLOW &&
+                        (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") && hideMulticastNot
+                if (!isDnsNotificationHidden && !isMulticastNotificationHidden) {
+                    vpnNotificationManager.postNotification(
+                        packageName = appPackageName, notificationPolicy, packetHeader.destination
+                    )
+                }
+                return Pair(ALLOW, appPackageName)
+            }
+
+            // Global default is BLOCK: perform preflight check.
+            val destinationUrl = "http://${ipAddress.hostAddress}:${packetHeader.destination.port}/"
+            try {
+                val protocol = URL(destinationUrl).protocol.lowercase(Locale.ROOT)
+                if (protocol == "http" || protocol == "https") {
+                    val pnaManager = PnaManager(vpnNotificationManager)
+                    return if (pnaManager.sendPreflightRequest(destinationUrl)) {
+                        // Preflight succeeded
+                        Pair(ALLOW, appPackageName)
+                    } else {
+                        // Preflight failed
+                        Pair(BLOCK, appPackageName)
+                    }
+                } else {
+                    // If protocol is not HTTP/HTTPS, preflight cannot be sent, remain BLOCK.
+                    return Pair(BLOCK, appPackageName)
+                }
+            } catch (e: Exception) {
+                // If URL parsing fails, remain BLOCK.
+                return Pair(BLOCK, appPackageName)
+            }
         }
         return Pair(DEFAULT, PACKAGE_NAME_UNKNOWN)
     }
