@@ -1,0 +1,44 @@
+sequenceDiagram
+    participant Client as Android App
+    participant LANShield as LANShield (VPN/Proxy)
+    participant LANServer as LAN Device Server
+
+    Client->>LANShield: Request connection to LAN IP (port 80)
+    LANShield->>LANShield: Check app-specific setting
+    alt App-specific policy is BLOCK
+        Note right of LANShield: App explicitly blocked. Do not send OPTIONS.
+        LANShield-->>Client: Abort connection
+    else App-specific policy is ALLOW
+        Note right of LANShield: App explicitly allowed. Forward connection directly.
+        LANShield-->>Client: Forward connection directly
+    else No app-specific setting
+        LANShield->>LANShield: Check default policy
+        alt Default policy is BLOCK
+            Note right of LANShield: Default BLOCK. Send OPTIONS request.
+            LANShield->>LANServer: OPTIONS / (header: "Access-Control-Request-Private-Network: true")
+            LANServer-->>LANShield: HTTP/1.1 200 OK [header: true/false/missing]
+
+            alt Response header is true
+                Note right of LANShield: Override block, show notification for user awareness.
+                LANShield-->>Client: Forward connection (override block)
+            else Response header is missing or false
+                Note right of LANShield: No override, connection blocked.
+                LANShield-->>Client: Abort connection (access denied)
+            end
+        else Default policy is ALLOW
+            Note right of LANShield: Default ALLOW. Send OPTIONS request.
+            LANShield->>LANServer: OPTIONS / (header: "Access-Control-Request-Private-Network: true")
+            LANServer-->>LANShield: HTTP/1.1 200 OK [header: true/false/missing]
+
+            alt Response header is true
+                Note right of LANShield: Connection allowed, no notification needed.
+                LANShield-->>Client: Forward connection directly
+            else Response header is false
+                Note right of LANShield: Connection blocked, show notification.
+                LANShield-->>Client: Abort connection (access denied)
+            else Response header is missing
+                Note right of LANShield: Connection allowed, show notification.
+                LANShield-->>Client: Forward connection (with notification)
+            end
+        end
+    end
