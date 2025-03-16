@@ -21,8 +21,10 @@ import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.SERVICE_NOTIFICATION_CHANNEL_ID
 import org.distrinet.lanshield.getPackageMetadata
+import org.distrinet.lanshield.pna.PnaCacheManager
 import org.distrinet.lanshield.ui.lantraffic.getLanTrafficPerAppRoute
 import java.net.InetSocketAddress
+import android.util.Log
 
 class LANShieldNotificationManager(private val context: Context) {
 
@@ -139,32 +141,41 @@ class LANShieldNotificationManager(private val context: Context) {
             notificationManager.notify(activeNotification.notificationId, notification)
         }
 
-        fun postPreflightSuccessNotification(message: String) {
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val title = "Preflight Success"
-            val builder = NotificationCompat.Builder(context, "Preflight Detected")
-                .setSmallIcon(android.R.drawable.stat_sys_upload_done) // replace with your icon resource
-                .setContentTitle(title)
-                .setContentText(message)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-            // Generate a unique notification ID or use a fixed one if you want a single persistent notification.
-            val notificationId = (System.currentTimeMillis() % 10000).toInt()
-            notificationManager.notify(notificationId, builder.build())
+    fun postPreflightNotification(key: String, title: String, message: String) {
+        // If a preflight notification for this key is already active, do not post a new one.
+        if (activeNotifications.containsKey(key)) {
+            return
         }
 
-        fun postPreflightFailureNotification(message: String) {
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            val title = "Preflight Failure"
-            val builder = NotificationCompat.Builder(context, "Preflight Detected")
-                .setSmallIcon(android.R.drawable.stat_notify_error) // replace with your icon resource
-                .setContentTitle(title)
-                .setContentText(message)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setAutoCancel(true)
-            val notificationId = (System.currentTimeMillis() % 10000).toInt()
-            notificationManager.notify(notificationId, builder.build())
+        val channelId = "Preflight_Detected"
+        val channel = NotificationChannel(
+            channelId,
+            "Preflight Notifications",
+            NotificationManager.IMPORTANCE_DEFAULT
+        ).apply {
+            description = "Notifications for preflight checks"
         }
+        notificationManager.createNotificationChannel(channel)
+
+        val builder = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.mipmap.logo_foreground) // Use your logo resource
+            .setContentTitle(title)
+            .setContentText(message)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setAutoCancel(true)
+            .setOnlyAlertOnce(true)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+        val activeNotification = ActiveNotification(getNewNotificationId(), mutableListOf(message), builder)
+        activeNotifications[key] = activeNotification
+        notificationManager.notify(activeNotification.notificationId, builder.build())
+
+        // Schedule removal of the active notification key after the TIMEOUT.
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            activeNotifications.remove(key)
+            Log.d("LANShieldNotification", "Removed preflight notification key: $key after timeout.")
+        }, PnaCacheManager.TIMEOUT)
+    }
 
     fun createNotificationChannels() {
 

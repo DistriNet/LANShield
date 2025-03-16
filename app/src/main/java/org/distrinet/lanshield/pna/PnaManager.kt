@@ -4,73 +4,65 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
 import android.util.Log
-import org.distrinet.lanshield.vpnservice.LANShieldNotificationManager
 
-class PnaManager(private val vpnNotificationManager: LANShieldNotificationManager) {
+class PnaManager() {
 
     companion object {
         val pnaCacheManager = PnaCacheManager()
     }
 
-    private fun extractServerPort(urlStr: String): String {
-        return try {
-            val url = URL(urlStr)
-            val port = if (url.port == -1) {
-                if (url.protocol.lowercase(Locale.ROOT) == "https") 443 else 80
-            } else {
-                url.port
-            }
-            "${url.host}:$port"
-        } catch (e: Exception) {
-            Log.e("PnaManager", "Error extracting server port: ${e.message}")
-            urlStr
-        }
-    }
+    private fun buildKey(ip: String, port: Int): String = "$ip:$port"
 
+    fun sendPreflightRequest(ip: String, port: Int): Boolean {
+        val key = buildKey(ip, port)
+        Log.d("PnaManager", "Checking cache for key: $key")
 
-    fun sendPreflightRequest(urlStr: String): Boolean {
-        val serverPortKey = extractServerPort(urlStr)
-        Log.d("PnaManager", "Checking cache for key: $serverPortKey")
-
-        if (pnaCacheManager.isPreflightValid(serverPortKey)) {
-            Log.d("PnaManager", "PNA Cached as ALLOWED for $serverPortKey, skipping preflight.")
+        if (pnaCacheManager.isPreflightValid(key)) {
+            Log.d("PnaManager", "PNA Cached as ALLOWED for $key, skipping preflight.")
             return true
         }
-        if (!pnaCacheManager.shouldRetryDisabled(serverPortKey)) {
-            Log.d("PnaManager", "PNA Cached as DENIED for $serverPortKey, skipping preflight.")
+        if (!pnaCacheManager.shouldRetryDenied(key)) {
+            Log.d("PnaManager", "PNA Cached as DENIED for $key, skipping preflight.")
             return false
         }
 
+        if (port !in listOf(80, 8080, 8081)) {
+            Log.d("PnaManager", "Port $port not in allowed list. Skipping preflight.")
+            return false
+        }
+
+        val destinationUrl = "http://$ip:$port/"
+        Log.d("PnaManager", "Sending preflight request to $destinationUrl")
         return try {
-            val url = URL(urlStr)
+            val url = URL(destinationUrl)
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "OPTIONS"
             connection.setRequestProperty("Access-Control-Request-Private-Network", "true")
+            connection.setRequestProperty("Connection", "close")
             connection.connectTimeout = 5000
             connection.readTimeout = 5000
             connection.doInput = true
 
             connection.connect()
-            connection.inputStream?.use { /* Consume stream if any, even if empty */ }
+            // Try to consume the input stream. If that fails, try the error stream.
+            val stream = connection.inputStream ?: connection.errorStream
+            stream?.use { }  // Consume response, even if empty.
             val responseCode = connection.responseCode
             val allowHeader = connection.getHeaderField("Access-Control-Allow-Private-Network")
             connection.disconnect()
 
-            Log.d("PnaManager", "Preflight response from $serverPortKey: $responseCode, header: $allowHeader")
+            Log.d("PnaManager", "Preflight response from $key: $responseCode, header: $allowHeader")
 
-            if (responseCode == 200 && allowHeader != null && allowHeader.lowercase(Locale.ROOT) == "true") {
-                pnaCacheManager.updateEnabled(serverPortKey)
-                vpnNotificationManager.postPreflightSuccessNotification("Preflight successful for $serverPortKey (cached for 5 min)")
+            if (responseCode == 200 && allowHeader?.lowercase(Locale.ROOT) == "true") {
+                pnaCacheManager.updateAllowed(key)
                 true
             } else {
-                pnaCacheManager.updateDisabled(serverPortKey)
-                vpnNotificationManager.postPreflightFailureNotification("Preflight failed for $serverPortKey (cached for 30 min)")
+                pnaCacheManager.updateDenied(key)
                 false
             }
         } catch (e: Exception) {
             Log.e("PnaManager", "Error sending preflight request: ${e.message}")
-            pnaCacheManager.updateDisabled(serverPortKey)
-            vpnNotificationManager.postPreflightFailureNotification("Preflight failed for $serverPortKey (cached for 30 min)")
+            pnaCacheManager.updateDenied(key)
             false
         }
     }

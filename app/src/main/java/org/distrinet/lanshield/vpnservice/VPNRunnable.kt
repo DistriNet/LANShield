@@ -26,8 +26,6 @@ import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.getPackageNameFromUid
 import org.distrinet.lanshield.pna.PnaManager
-import java.net.URL
-import java.util.Locale
 import tech.httptoolkit.android.vpn.ClientPacketWriter
 import tech.httptoolkit.android.vpn.SessionHandler
 import tech.httptoolkit.android.vpn.SessionManager
@@ -350,52 +348,88 @@ class VPNRunnable(
             val exceptionPolicy = accessPoliciesCache.getOrDefault(appPackageName, DEFAULT)
             val isSystemApp = getPackageMetadata(appPackageName, context).isSystem
 
-            // If an explicit per-app policy is set (ALLOW or BLOCK), honor it immediately.
+            // 1. If an explicit per-app policy is set (ALLOW or BLOCK), honor it immediately.
             if (exceptionPolicy != DEFAULT) {
+                Log.d("shouldForwardPacket", "Explicit policy for $appPackageName: $exceptionPolicy")
                 return Pair(exceptionPolicy, appPackageName)
             }
 
+            // 2. App-specific policy is DEFAULT: determine effective (applied) policy.
             var appliedPolicy = defaultForwardPolicy
             if (defaultForwardPolicy != ALLOW && isSystemApp) {
                 appliedPolicy = systemAppsForwardPolicy
             }
 
-            // App-specific policy is DEFAULT: use the Global policy.
-            // If global default is ALLOW, forward immediately.
-            if (appliedPolicy  == ALLOW) {
+            // 2a. If the effective policy is ALLOW, use your standard notification logic.
+            if (appliedPolicy == ALLOW) {
                 val notificationPolicy = defaultForwardPolicy
                 val isDnsNotificationHidden = defaultForwardPolicy == ALLOW &&
                         (packetHeader.destination.port == 53) && hideDnsNot
                 val isMulticastNotificationHidden = defaultForwardPolicy == ALLOW &&
                         (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") && hideMulticastNot
                 if (!isDnsNotificationHidden && !isMulticastNotificationHidden) {
-                    vpnNotificationManager.postNotification(
-                        packageName = appPackageName, notificationPolicy, packetHeader.destination
-                    )
+                    vpnNotificationManager.postNotification(appPackageName, notificationPolicy, packetHeader.destination)
                 }
                 return Pair(ALLOW, appPackageName)
             }
 
-            // Global default is BLOCK: perform preflight check.
-            val destinationUrl = "http://${ipAddress.hostAddress}:${packetHeader.destination.port}/"
-            try {
-                val protocol = URL(destinationUrl).protocol.lowercase(Locale.ROOT)
-                if (protocol == "http" || protocol == "https") {
-                    val pnaManager = PnaManager(vpnNotificationManager)
-                    return if (pnaManager.sendPreflightRequest(destinationUrl)) {
-                        // Preflight succeeded
-                        Pair(ALLOW, appPackageName)
-                    } else {
-                        // Preflight failed
-                        Pair(BLOCK, appPackageName)
-                    }
-                } else {
-                    // If protocol is not HTTP/HTTPS, preflight cannot be sent, remain BLOCK.
-                    return Pair(BLOCK, appPackageName)
-                }
+            // 3. For effective BLOCK (or global default BLOCK) – perform preflight check.
+            // Only perform preflight for plaintext HTTP on ports 80, 8080, or 8081.
+            val port = packetHeader.destination.port
+            if (port !in listOf(80, 8080, 8081)) {
+                vpnNotificationManager.postNotification(appPackageName, appliedPolicy, packetHeader.destination)
+                return Pair(appliedPolicy, appPackageName)
+            }
+            val destinationUrl = "http://${ipAddress.hostAddress}:$port/"
+            // Rebuild a key based on IP:port.
+            val key = "${ipAddress.hostAddress}:$port"
+            Log.d("shouldForwardPacket", "Sending preflight request to $destinationUrl")
+            val pnaManager = PnaManager()
+            val preflightResult: Boolean? = try {
+                pnaManager.sendPreflightRequest(ipAddress.hostAddress, port)
             } catch (e: Exception) {
-                // If URL parsing fails, remain BLOCK.
-                return Pair(BLOCK, appPackageName)
+                Log.e("shouldForwardPacket", "Preflight exception: ${e.message}")
+                null
+            }
+
+            // 4. Handle preflight result based on global default.
+            if (defaultForwardPolicy == ALLOW) {
+                when (preflightResult) {
+                    true -> {
+                        Log.d("shouldForwardPacket", "Preflight positive for $destinationUrl, allowing silently.")
+                        return Pair(ALLOW, appPackageName)
+                    }
+                    false -> {
+                        vpnNotificationManager.postPreflightNotification(
+                            key,
+                            "Preflight Failure",
+                            "Preflight failed for $key (cached for 5 min)"
+                        )
+                        return Pair(BLOCK, appPackageName)
+                    }
+                    null -> {
+                        vpnNotificationManager.postNotification(appPackageName, defaultForwardPolicy, packetHeader.destination)
+                        return Pair(ALLOW, appPackageName)
+                    }
+                }
+            } else if (defaultForwardPolicy == BLOCK) {
+                when (preflightResult) {
+                    true -> {
+                        Log.d("shouldForwardPacket", "Preflight positive for $destinationUrl, overriding BLOCK.")
+                        return Pair(ALLOW, appPackageName)
+                    }
+                    else -> {
+                        vpnNotificationManager.postPreflightNotification(
+                            key,
+                            "Preflight Failure",
+                            "Preflight failed for $key (cached for 5 min)"
+                        )
+                        return Pair(BLOCK, appPackageName)
+                    }
+                }
+            } else {
+                vpnNotificationManager.postNotification(appPackageName, appliedPolicy, packetHeader.destination)
+                return Pair(appliedPolicy, appPackageName)
             }
         }
         return Pair(DEFAULT, PACKAGE_NAME_UNKNOWN)

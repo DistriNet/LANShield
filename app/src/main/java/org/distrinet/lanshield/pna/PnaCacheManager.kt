@@ -4,42 +4,41 @@ import android.util.Log
 
 class PnaCacheManager {
 
-    private companion object {
-        const val ENABLED_TIMEOUT = 5 * 60 * 1000L       // 5 minutes in ms
-        const val DISABLED_RETRY_INTERVAL = 30 * 60 * 1000L // 30 minutes in ms
+    companion object {
+        const val TIMEOUT = 5 * 60 * 1000L  // 5 minutes in ms
     }
 
-    private val enabledCache = mutableMapOf<String, Long>()
-    private val disabledCache = mutableMapOf<String, Long>()
+    private val allowedCache = mutableMapOf<String, Long>()
+    private val deniedCache = mutableMapOf<String, Long>()
 
-    fun isPreflightValid(serverPortKey: String): Boolean {
-        val lastTime = enabledCache[serverPortKey]
+    fun isPreflightValid(key: String): Boolean {
+        val lastTime = allowedCache[key]
         return if (lastTime != null) {
             val elapsed = System.currentTimeMillis() - lastTime
-            if (elapsed < ENABLED_TIMEOUT) {
-                Log.d("PnaCacheManager", "Cache hit for $serverPortKey: $elapsed ms elapsed (< $ENABLED_TIMEOUT).")
+            if (elapsed < TIMEOUT) {
+                Log.d("PnaCacheManager", "Cache hit for $key: $elapsed ms elapsed (< $TIMEOUT).")
                 true
             } else {
-                Log.d("PnaCacheManager", "Cache expired for $serverPortKey: $elapsed ms elapsed (>= $ENABLED_TIMEOUT). Removing entry.")
-                enabledCache.remove(serverPortKey)
+                Log.d("PnaCacheManager", "Cache expired for $key: $elapsed ms elapsed (>= $TIMEOUT). Removing entry.")
+                allowedCache.remove(key)
                 false
             }
         } else {
-            Log.d("PnaCacheManager", "No cache entry for $serverPortKey.")
+            Log.d("PnaCacheManager", "No allowed cache entry for $key.")
             false
         }
     }
 
-    fun shouldRetryDisabled(serverPortKey: String): Boolean {
-        val lastTime = disabledCache[serverPortKey]
+    fun shouldRetryDenied(key: String): Boolean {
+        val lastTime = deniedCache[key]
         return if (lastTime != null) {
             val elapsed = System.currentTimeMillis() - lastTime
-            if (elapsed < DISABLED_RETRY_INTERVAL) {
-                Log.d("PnaCacheManager", "Disabled cache hit for $serverPortKey: $elapsed ms elapsed (< $DISABLED_RETRY_INTERVAL).")
+            if (elapsed < TIMEOUT) {
+                Log.d("PnaCacheManager", "Denied cache hit for $key: $elapsed ms elapsed (< $TIMEOUT).")
                 false
             } else {
-                Log.d("PnaCacheManager", "Disabled cache expired for $serverPortKey: $elapsed ms elapsed (>= $DISABLED_RETRY_INTERVAL). Removing entry.")
-                disabledCache.remove(serverPortKey)
+                Log.d("PnaCacheManager", "Denied cache expired for $key: $elapsed ms elapsed (>= $TIMEOUT). Removing entry.")
+                deniedCache.remove(key)
                 true
             }
         } else {
@@ -47,13 +46,13 @@ class PnaCacheManager {
         }
     }
 
-    fun updateEnabled(serverPortKey: String) {
-        enabledCache[serverPortKey] = System.currentTimeMillis()
-        Log.d("PnaCacheManager", "PNA Allowed for $serverPortKey - Caching for 5 min")
+    fun updateAllowed(key: String) {
+        allowedCache[key] = System.currentTimeMillis()
+        Log.d("PnaCacheManager", "PNA Allowed for $key - Caching for 5 min")
     }
 
-    fun updateDisabled(serverPortKey: String) {
-        disabledCache[serverPortKey] = System.currentTimeMillis()
-        Log.d("PnaCacheManager", "PNA Denied for $serverPortKey - Caching for 30 min")
+    fun updateDenied(key: String) {
+        deniedCache[key] = System.currentTimeMillis()
+        Log.d("PnaCacheManager", "PNA Denied for $key - Caching for 5 min")
     }
 }
