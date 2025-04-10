@@ -60,7 +60,24 @@ interface FlowDao {
             WHERE timeEndAtLastSync < timeEnd 
     """
     )
-    fun getUnsyncedFlows(): List<LANFlow>
+    fun getNotSyncedFlows(): List<LANFlow>
+
+    @Query(
+        """
+        SELECT * FROM flow
+        WHERE timeEndAtLastSync < timeEnd
+        LIMIT :limit OFFSET :offset
+    """
+    )
+    fun getNotSyncedFlowsPaged(limit: Int, offset: Int): List<LANFlow>
+
+    @Query(
+        """
+            SELECT COUNT(*) FROM flow
+            WHERE timeEndAtLastSync < timeEnd 
+    """
+    )
+    fun countNotSyncedFlows(): Int
 
     @Query(
         "UPDATE flow SET timeEndAtLastSync = :timeEndLast WHERE uuid = :flowId"

@@ -95,19 +95,26 @@ class SendToServerWorker @AssistedInject constructor(
                 }
                 val appUsageStatistics =
                     appUsageStats.getUsageStatsList(applicationContext, timeOfLastSync)
-                addAppUsage(appUsageStatistics)
+                syncAppUsage(appUsageStatistics)
             }
 
-            val flows = flowDao.getUnsyncedFlows()
-            addFlows(flows)
+            val batchSize = 1000
+            val totalCount = flowDao.countNotSyncedFlows()
+            val batches = (totalCount + batchSize - 1) / batchSize  // ceiling division
+
+            for (i in (batches - 1) downTo 0) {
+                val offset = i * batchSize
+                val flows = flowDao.getNotSyncedFlowsPaged(batchSize, offset)
+                syncFlows(flows)
+            }
 
             val allowedUnsyncedApps = lanAccessPolicyDao.getAllUnsyncedPolicy(Policy.ALLOW)
             val blockedUnsyncedApps = lanAccessPolicyDao.getAllUnsyncedPolicy(Policy.BLOCK)
             val defaultUnsyncedApps = lanAccessPolicyDao.getAllUnsyncedPolicy(Policy.DEFAULT)
-            addACL(allowedUnsyncedApps, blockedUnsyncedApps, defaultUnsyncedApps)
+            syncACL(allowedUnsyncedApps, blockedUnsyncedApps, defaultUnsyncedApps)
 
             val sessions = lanShieldSessionDao.getAllShouldSync()
-            addLanShieldSessions(sessions)
+            syncLanShieldSessions(sessions)
         }
     }
 
@@ -149,7 +156,6 @@ class SendToServerWorker @AssistedInject constructor(
                 1.5f
             )
         )
-
         queue.add(jsonRequest)
 
     }
@@ -299,7 +305,7 @@ class SendToServerWorker @AssistedInject constructor(
     }
 
 
-    private suspend fun addFlows(flows: List<LANFlow>?) {
+    private suspend fun syncFlows(flows: List<LANFlow>?) {
         if (flows.isNullOrEmpty()) return
         val appInstallationUUID: String = getAppInstallationUUID() ?: return
 
@@ -317,7 +323,7 @@ class SendToServerWorker @AssistedInject constructor(
 
     }
 
-    private suspend fun addACL(
+    private suspend fun syncACL(
         allowedUnsyncedApps: List<String>?,
         blockedUnsyncedApps: List<String>?,
         defaultUnsyncedApps: List<String>?
@@ -339,7 +345,7 @@ class SendToServerWorker @AssistedInject constructor(
 
     }
 
-    private suspend fun addLanShieldSessions(
+    private suspend fun syncLanShieldSessions(
         sessions: List<LANShieldSession>
     ) {
         if(sessions.isEmpty()) return
@@ -358,7 +364,7 @@ class SendToServerWorker @AssistedInject constructor(
         apiRequest(Request.Method.POST, ADD_LANSHIELD_SESSION, jsonBody)
     }
 
-    private suspend fun addAppUsage(appUsage: List<UsageStats>) {
+    private suspend fun syncAppUsage(appUsage: List<UsageStats>) {
         val jsonBody = JSONObject()
         jsonBody.put("app_installation_uuid", getAppInstallationUUID())
         jsonBody.put("usage_stats", AppUsageStats.toJSONArray(appUsage, applicationContext))
