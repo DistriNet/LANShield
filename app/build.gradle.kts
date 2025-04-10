@@ -3,6 +3,7 @@ import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
+    alias(libs.plugins.compose.compiler)
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
     id("com.google.gms.google-services")
@@ -11,12 +12,12 @@ plugins {
 
 android {
     namespace = "org.distrinet.lanshield"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "org.distrinet.lanshield"
         minSdk = 29
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 8
         versionName = "0.8"
 
