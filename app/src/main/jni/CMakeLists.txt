@@ -7,11 +7,10 @@ SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fPIC")
 
 set(ROOTDIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../../)
 set(NDPI_ROOT ${ROOTDIR}/submodules/nDPI)
-include_directories(${NDPI_ROOT}/src/include ${NDPI_ROOT}/src/lib/third_party/include)
+include_directories(${NDPI_ROOT}/src/include ${NDPI_ROOT}/src/lib/third_party/include ndpi-generated)
 
 message(${ROOTDIR})
 message(${NDPI_ROOT})
-
 add_definitions(-DNDPI_LIB_COMPILATION)
 AUX_SOURCE_DIRECTORY(${NDPI_ROOT}/src/lib ndpiSources)
 AUX_SOURCE_DIRECTORY(${NDPI_ROOT}/src/lib/third_party/src ndpiSources)
