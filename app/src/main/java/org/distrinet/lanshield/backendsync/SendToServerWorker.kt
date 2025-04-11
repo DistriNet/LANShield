@@ -15,7 +15,6 @@ import com.android.volley.Request
 import com.android.volley.RequestQueue
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
-import com.google.firebase.crashlytics.FirebaseCrashlytics
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 import kotlinx.coroutines.CoroutineScope
@@ -140,11 +139,11 @@ class SendToServerWorker @AssistedInject constructor(
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
-                FirebaseCrashlytics.getInstance().recordException(e)
+                crashReporter.recordException(e)
             }
         }, { error ->
             //NO RESPONSE
-            FirebaseCrashlytics.getInstance().recordException(error)
+            crashReporter.recordException(error)
             Log.e(TAG, "ERROR $error")
         })
         jsonRequest.setShouldRetryConnectionErrors(true)
@@ -168,7 +167,7 @@ class SendToServerWorker @AssistedInject constructor(
             appVersionsAllowed = response.getString("app_versions").split(",")
         } catch (e: JSONException) {
             Log.e(TAG, e.toString())
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashReporter.recordException(e)
         }
         if (shouldSync && isVersionAllowed(appVersionsAllowed)) {
             runBlocking {
@@ -204,7 +203,7 @@ class SendToServerWorker @AssistedInject constructor(
         }
         catch (e: Exception) {
             Log.e(TAG, e.toString())
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashReporter.recordException(e)
         }
 
     }
@@ -219,11 +218,11 @@ class SendToServerWorker @AssistedInject constructor(
             }
         } catch (e: IllegalArgumentException) {
             Log.d(TAG, "UUID is of wrong format $e")
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashReporter.recordException(e)
         }
         catch (e: JSONException) {
             Log.e(TAG, e.toString())
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashReporter.recordException(e)
         }
 
     }
@@ -251,7 +250,7 @@ class SendToServerWorker @AssistedInject constructor(
                     val timeEndLong = instant.toEpochMilli()
                     flowDao.updateFlowsSyncedTime(flowId, timeEndLong)
                 } catch (e: Exception) {
-                    FirebaseCrashlytics.getInstance().recordException(e)
+                    crashReporter.recordException(e)
                     Log.e(TAG, e.toString())
                 }
 
@@ -270,7 +269,7 @@ class SendToServerWorker @AssistedInject constructor(
             }
         }
         catch (e: Exception) {
-            FirebaseCrashlytics.getInstance().recordException(e)
+            crashReporter.recordException(e)
             Log.e(TAG, e.toString())
         }
 
@@ -293,7 +292,7 @@ class SendToServerWorker @AssistedInject constructor(
                     val timeEndLong = instant.toEpochMilli()
                     lanShieldSessionDao.updateSessionsSyncedTime(sessionId, timeEndLong)
                 } catch (e: Exception) {
-                    FirebaseCrashlytics.getInstance().recordException(e)
+                    crashReporter.recordException(e)
                     Log.e(TAG, e.toString())
                 }
             }

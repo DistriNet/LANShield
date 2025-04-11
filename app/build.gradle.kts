@@ -1,4 +1,5 @@
 import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
+val useFirebase = project.findProperty("useFirebase")?.toString()?.toBoolean() == true
 
 plugins {
     alias(libs.plugins.android.application)
@@ -6,8 +7,11 @@ plugins {
     alias(libs.plugins.compose.compiler)
     id("kotlin-kapt")
     id("com.google.dagger.hilt.android")
-    id("com.google.gms.google-services")
-    id("com.google.firebase.crashlytics")
+}
+
+if(useFirebase) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
 }
 
 android {
@@ -21,6 +25,8 @@ android {
         versionCode = 8
         versionName = "0.8"
 
+        buildConfigField("Boolean", "USE_FIREBASE", useFirebase.toString())
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
@@ -33,6 +39,8 @@ android {
         }
     }
 
+
+
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -44,12 +52,14 @@ android {
             )
             signingConfig = signingConfigs.getByName("debug")
 
-            configure<CrashlyticsExtension> {
-                // Enable processing and uploading of native symbols to Firebase servers.
-                // By default, this is disabled to improve build speeds.
-                // This flag must be enabled to see properly-symbolicated native
-                // stack traces in the Crashlytics dashboard.
-                nativeSymbolUploadEnabled = true
+            if(useFirebase) {
+                configure<CrashlyticsExtension> {
+                    // Enable processing and uploading of native symbols to Firebase servers.
+                    // By default, this is disabled to improve build speeds.
+                    // This flag must be enabled to see properly-symbolicated native
+                    // stack traces in the Crashlytics dashboard.
+                    nativeSymbolUploadEnabled = true
+                }
             }
         }
     }
@@ -122,12 +132,13 @@ dependencies {
     // To use Kotlin annotation processing tool (kapt)
     kapt(libs.androidx.room.compiler)
 
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.crashlytics)
-    implementation(libs.firebase.crashlytics.ndk)
-    implementation(libs.google.firebase.analytics)
-
+    if(useFirebase) {
+        implementation(platform(libs.firebase.bom))
+        implementation(libs.firebase.analytics)
+        implementation(libs.firebase.crashlytics)
+        implementation(libs.firebase.crashlytics.ndk)
+        implementation(libs.google.firebase.analytics)
+    }
 }
 
 // Allow references to generated code
