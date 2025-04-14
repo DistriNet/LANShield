@@ -9,4 +9,3 @@
    <li>Receive notifications when apps attempt to access your LAN.</li>
 </ul>
 <p><strong>Note:</strong> LANShield uses the VpnService API to create a local virtual VPN interface. It does not establish any external VPN connection.</p>
-
