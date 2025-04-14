@@ -1,0 +1,1 @@
+Protect your LAN by managing app access to your local network.
