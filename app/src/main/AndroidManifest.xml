@@ -24,7 +24,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.LANShield"
         android:name="org.distrinet.lanshield.LANShieldApplication"
-        tools:targetApi="31">
+        tools:targetApi="35">
         <activity
             android:name="org.distrinet.lanshield.MainActivity"
             android:exported="true"
