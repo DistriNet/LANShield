@@ -1,0 +1,12 @@
+<p><strong>LANShield</strong> lets you monitor and control LAN traffic of other apps on your device.</p>
+
+<p>Any app with the <i>INTERNET</i> permission can also access devices on your local network—such as your laptop, router, IP camera, or IoT devices. Some apps misuse this capability to gather data or compromise other devices. LANShield helps you protect your local network by blocking LAN access for apps that don’t need it.</p>
+
+<p><strong>Features:</strong></p>
+<ul>
+   <li>Block or allow apps from accessing your local network.</li>
+   <li>Gain insights into which apps are interacting with your LAN.</li>
+   <li>Receive notifications when apps attempt to access your LAN.</li>
+</ul>
+<p><strong>Note:</strong> LANShield uses the VpnService API to create a local virtual VPN interface. It does not establish any external VPN connection.</p>
+
