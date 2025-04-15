@@ -1,5 +1,8 @@
-import com.google.firebase.crashlytics.buildtools.gradle.CrashlyticsExtension
-val useFirebase = project.findProperty("useFirebase")?.toString()?.toBoolean() == true
+//import com.google.fire[DELETEME]base.crashlytics.buildtools.gradle.CrashlyticsExtension
+
+val useFirebase: Boolean by lazy {
+    gradle.startParameter.taskRequests.toString().contains("playStore", ignoreCase = true)
+}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -10,8 +13,8 @@ plugins {
 }
 
 if(useFirebase) {
-    apply(plugin = "com.google.gms.google-services")
-    apply(plugin = "com.google.firebase.crashlytics")
+//    apply(plugin = "com.google.gms.go[DELETEME]ogle-services")
+//    apply(plugin = "com.google.fire[DELETEME]base.crashlytics")
 }
 
 android {
@@ -24,8 +27,6 @@ android {
         targetSdk = 35
         versionCode = 8
         versionName = "0.8"
-
-        buildConfigField("Boolean", "USE_FIREBASE", useFirebase.toString())
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -53,16 +54,35 @@ android {
             signingConfig = signingConfigs.getByName("debug")
 
             if(useFirebase) {
-                configure<CrashlyticsExtension> {
-                    // Enable processing and uploading of native symbols to Firebase servers.
-                    // By default, this is disabled to improve build speeds.
-                    // This flag must be enabled to see properly-symbolicated native
-                    // stack traces in the Crashlytics dashboard.
-                    nativeSymbolUploadEnabled = true
-                }
+//                configure<CrashlyticsExtension> {
+//                    // Enable processing and uploading of native symbols to Firebase servers.
+//                    // By default, this is disabled to improve build speeds.
+//                    // This flag must be enabled to see properly-symbolicated native
+//                    // stack traces in the Crashlytics dashboard.
+//                    nativeSymbolUploadEnabled = true
+//                }
             }
         }
+
+        debug {
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isDebuggable = true
+            applicationIdSuffix = ".debug"
+        }
     }
+    flavorDimensions += "version"
+
+    productFlavors {
+        create("foss") {
+            dimension = "version"
+        }
+        create("playStore") {
+            dimension = "version"
+        }
+    }
+
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -132,13 +152,12 @@ dependencies {
     // To use Kotlin annotation processing tool (kapt)
     kapt(libs.androidx.room.compiler)
 
-    if(useFirebase) {
-        implementation(platform(libs.firebase.bom))
-        implementation(libs.firebase.analytics)
-        implementation(libs.firebase.crashlytics)
-        implementation(libs.firebase.crashlytics.ndk)
-        implementation(libs.google.firebase.analytics)
-    }
+    add("playStoreImplementation", platform(libs.firebase.bom))
+    add("playStoreImplementation", libs.firebase.analytics)
+    add("playStoreImplementation", libs.firebase.crashlytics)
+    add("playStoreImplementation", libs.firebase.crashlytics.ndk)
+    add("playStoreImplementation", libs.google.firebase.analytics)
+
 }
 
 // Allow references to generated code

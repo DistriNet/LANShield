@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import org.distrinet.lanshield.BuildConfig
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.Request
 import com.android.volley.RequestQueue
@@ -32,7 +33,6 @@ import org.distrinet.lanshield.ADD_LANSHIELD_SESSION
 import org.distrinet.lanshield.APP_INSTALLATION_UUID
 import org.distrinet.lanshield.APP_USAGE_SUCCESS
 import org.distrinet.lanshield.BACKEND_URL
-import org.distrinet.lanshield.BuildConfig
 import org.distrinet.lanshield.GET_APP_INSTALLATION_UUID
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.SHARE_APP_USAGE_KEY
@@ -40,6 +40,7 @@ import org.distrinet.lanshield.SHARE_LAN_METRICS_KEY
 import org.distrinet.lanshield.SHOULD_SYNC
 import org.distrinet.lanshield.TAG
 import org.distrinet.lanshield.TIME_OF_LAST_SYNC
+import org.distrinet.lanshield.crashreport.crashReporter
 import org.distrinet.lanshield.database.dao.FlowDao
 import org.distrinet.lanshield.database.dao.LANShieldSessionDao
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
