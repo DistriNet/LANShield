@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.22.1)
 project("lanshield")
 
 add_link_options("LINKER:--build-id=none")
+add_compile_options("-ffile-prefix-map=${CMAKE_CURRENT_SOURCE_DIR}=.")
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fPIC")
 
