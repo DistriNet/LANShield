@@ -132,6 +132,7 @@ class VPNService : VpnService(), IProtectSocket {
 
                 else -> {
                     if (!isVPNRunning()) {
+                        LANShieldNotificationManager(this).createNotificationChannels()
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                             startForeground(1, createNotification(), FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
                         }
