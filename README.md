@@ -4,6 +4,8 @@ This repository contains the source code of the LANShield Android app. You can v
 
 * [Google Play Store](https://play.google.com/store/apps/details?id=org.distrinet.lanshield)
 
+* [F-Droid](https://f-droid.org/en/packages/org.distrinet.lanshield/)
+
 * [Direct APK download](https://gitlab.kuleuven.be/distrinet/research/netsec/lanshield/-/releases)
 
 
