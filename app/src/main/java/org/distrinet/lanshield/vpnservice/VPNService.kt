@@ -47,6 +47,10 @@ import java.net.InetAddress
 import java.net.NetworkInterface
 import javax.inject.Inject
 
+/* The IP address of the virtual network interface */
+const val TUN_IP4_ADDRESS = "10.215.173.1"
+const val TUN_IP6_ADDRESS = "fd00:2:fd00:1:fd00:1:fd00:1"
+
 @AndroidEntryPoint
 class VPNService : VpnService(), IProtectSocket {
     private var vpnRunnable: VPNRunnable? = null
@@ -324,8 +328,8 @@ class VPNService : VpnService(), IProtectSocket {
 
         val builder = Builder()
         builder.setSession(getString(R.string.app_name) + " LAN Firewall")
-            .addAddress("169.254.61.43", 24) // IPv4 link-local address
-            .addAddress("fe80::2B", 64) // IPv6 link-local address
+            .addAddress(TUN_IP4_ADDRESS, 32)
+            .addAddress(TUN_IP6_ADDRESS, 128)
         addIpv4Routes(builder)
         addIpv6Routes(builder)
         addInterfaceAddressRoutes(builder)
