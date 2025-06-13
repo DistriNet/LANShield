@@ -1,9 +1,7 @@
 package org.distrinet.lanshield.ui.settings
 
-import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
@@ -19,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,7 +30,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -59,11 +55,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.distrinet.lanshield.ABOUT_LANSHIELD_URL
 import org.distrinet.lanshield.FEEDBACK_URL
-import org.distrinet.lanshield.PRIVACY_POLICY_URL
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
-import org.distrinet.lanshield.STUDY_MORE_INFO_URL
-import org.distrinet.lanshield.isAppUsageAccessGranted
 import org.distrinet.lanshield.ui.LANShieldIcons
 import org.distrinet.lanshield.ui.components.GrantAppUsagePermissionDialog
 import org.distrinet.lanshield.ui.components.LanShieldInfoDialog
@@ -78,18 +71,10 @@ internal fun SettingsRoute(
     viewModel: SettingsViewModel,
     navigateToPerAppExceptions: () -> Unit,
 ) {
-    val isShareLanMetricsEnabled by viewModel.shareLanMetricsEnabled.collectAsStateWithLifecycle(
-        false
-    )
-    val isShareAppUsageEnabled by viewModel.shareAppUsageEnabled.collectAsStateWithLifecycle(false)
+
     val isAutoStartEnabled by viewModel.isAutoStartEnabled.collectAsStateWithLifecycle(false)
     val defaultPolicy by viewModel.defaultPolicy.collectAsStateWithLifecycle(initialValue = Policy.DEFAULT)
     val systemAppsPolicy by viewModel.systemAppsPolicy.collectAsStateWithLifecycle(initialValue = Policy.DEFAULT)
-
-    val isAllowMulticastEnabled by viewModel.allowMulticast.collectAsStateWithLifecycle(false)
-    val isAllowDnsEnabled by viewModel.allowDns.collectAsStateWithLifecycle(false)
-    val isHideMulticastNot by viewModel.hideMulticastNot.collectAsStateWithLifecycle(false)
-    val isHideDnsNot by viewModel.hideDnsNot.collectAsStateWithLifecycle(false)
 
 
     var showGrantAppUsageDialog by remember { mutableStateOf(false) }
@@ -100,16 +85,6 @@ internal fun SettingsRoute(
     SettingsScreen(
         modifier = modifier,
         defaultPolicy = defaultPolicy,
-        isShareLanMetricsEnabled = isShareLanMetricsEnabled,
-        isShareAppUsageEnabled = isShareAppUsageEnabled,
-        onChangeShareLanMetrics = { isEnabled -> viewModel.onChangeShareLanMetrics(isEnabled) },
-        onChangeShareAppUsage = { isEnabled ->
-            onChangeShareAppUsageWithPermission(
-                isEnabled,
-                { viewModel.onChangeShareAppUsage(it) },
-                context,
-                { showGrantAppUsageDialog = true })
-        },
         onChangeDefaultPolicy = { newPolicy -> viewModel.onChangeDefaultPolicy(newPolicy) },
         navigateToPerAppExceptions = navigateToPerAppExceptions,
         showGrantAppUsageDialog = showGrantAppUsageDialog,
@@ -122,34 +97,9 @@ internal fun SettingsRoute(
         onChangeSystemAppsPolicy = { viewModel.onChangeSystemAppsPolicy(it) },
         onChangeAutoStart = { viewModel.onChangeAutoStart(it) },
         isAutoStartEnabled = isAutoStartEnabled,
-        isAllowMulticastEnabled = isAllowMulticastEnabled,
-        onChangeAllowMulticast = { viewModel.onChangeAllowMulticast(it) },
-        isAllowDnsEnabled = isAllowDnsEnabled,
-        onChangeAllowDns = { viewModel.onChangeAllowDns(it) },
-        isHideMulticastNot = isHideMulticastNot,
-        onChangeMulticastNot = { viewModel.onChangeHideMulticastNot(it) },
-        isHideDnsNot = isHideDnsNot,
-        onChangeDnsNot = { viewModel.onChangeHideDnsNot(it) },
     )
 }
 
-private fun onChangeShareAppUsageWithPermission(
-    isEnabled: Boolean,
-    setShareAppUsage: (Boolean) -> Unit,
-    context: Context,
-    showDialog: () -> Unit
-) {
-//    var accessGranted = checkSelfPermission(
-//        context,
-//        android.Manifest.permission.PACKAGE_USAGE_STATS
-//    ) == PackageManager.PERMISSION_GRANTED
-
-    val accessGranted = isAppUsageAccessGranted(context)
-
-    if (isEnabled && !accessGranted) {
-        showDialog()
-    } else setShareAppUsage(isEnabled)
-}
 
 private fun startUsageAccessSettingsActivity(context: Context) {
     context.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
@@ -367,10 +317,6 @@ fun SettingsSwitchComp(
 @Composable
 internal fun SettingsScreenPreview() {
     SettingsScreen(
-        isShareAppUsageEnabled = true,
-        onChangeShareAppUsage = {},
-        isShareLanMetricsEnabled = true,
-        onChangeShareLanMetrics = {},
         defaultPolicy = Policy.BLOCK,
         onChangeDefaultPolicy = {},
         navigateToPerAppExceptions = {},
@@ -381,24 +327,12 @@ internal fun SettingsScreenPreview() {
         onChangeSystemAppsPolicy = {},
         isAutoStartEnabled = true,
         onChangeAutoStart = {},
-        isAllowMulticastEnabled = false,
-        onChangeAllowMulticast = {},
-        isAllowDnsEnabled = false,
-        onChangeAllowDns = {},
-        isHideDnsNot = false,
-        onChangeDnsNot = {},
-        isHideMulticastNot = false,
-        onChangeMulticastNot = {}
     )
 }
 
 @Composable
 internal fun SettingsScreen(
     modifier: Modifier = Modifier,
-    isShareLanMetricsEnabled: Boolean,
-    onChangeShareLanMetrics: (Boolean) -> Unit,
-    isShareAppUsageEnabled: Boolean,
-    onChangeShareAppUsage: (Boolean) -> Unit,
     defaultPolicy: Policy,
     onChangeDefaultPolicy: (Policy) -> Unit,
     systemAppsPolicy: Policy,
@@ -409,14 +343,6 @@ internal fun SettingsScreen(
     onConfirmGrantAppUsageDialog: () -> Unit,
     isAutoStartEnabled: Boolean,
     onChangeAutoStart: (Boolean) -> Unit,
-    isAllowMulticastEnabled: Boolean,
-    onChangeAllowMulticast: (Boolean) -> Unit,
-    isAllowDnsEnabled: Boolean,
-    onChangeAllowDns: (Boolean) -> Unit,
-    isHideDnsNot: Boolean,
-    onChangeDnsNot: (Boolean) -> Unit,
-    isHideMulticastNot: Boolean,
-    onChangeMulticastNot: (Boolean) -> Unit,
 ) {
 
     var showLanBlockingMoreInfoDialog by remember { mutableStateOf(false) }
@@ -495,72 +421,6 @@ internal fun SettingsScreen(
                     iconDesc = R.string.per_app_exceptions,
                     onClick = navigateToPerAppExceptions
                 )
-                AnimatedVisibility(visible = defaultPolicy == Policy.BLOCK) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsSwitchComp(
-                        name = R.string.allow_multicast_traffic,
-                        isChecked = isAllowMulticastEnabled,
-                        onCheckedChange = onChangeAllowMulticast
-                    )
-                }
-                AnimatedVisibility(visible = defaultPolicy == Policy.BLOCK) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsSwitchComp(
-                        name = R.string.allow_dns_traffic,
-                        isChecked = isAllowDnsEnabled,
-                        onCheckedChange = onChangeAllowDns
-                    )
-                }
-                AnimatedVisibility(visible = defaultPolicy == Policy.ALLOW) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsSwitchComp(
-                        name = R.string.hide_multicast_notification,
-                        isChecked = isHideMulticastNot,
-                        onCheckedChange = onChangeMulticastNot
-                    )
-                }
-                AnimatedVisibility(visible = defaultPolicy == Policy.ALLOW) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsSwitchComp(
-                        name = R.string.hide_dns_notification,
-                        isChecked = isHideDnsNot,
-                        onCheckedChange = onChangeDnsNot
-                    )
-                }
-            }
-            SettingsGroup(name = R.string.join_our_academic_study_by_ku_leuven) {
-                var icon: ImageVector? = null
-                if (isShareLanMetricsEnabled) {
-                    icon = if (isShareAppUsageEnabled) {
-                        LANShieldIcons.SentimentVerySatisfied
-                    } else {
-                        LANShieldIcons.Mood
-                    }
-                }
-
-                SettingsSwitchComp(
-                    name = R.string.share_anonymous_lan_metrics,
-                    isChecked = isShareLanMetricsEnabled,
-                    onCheckedChange = onChangeShareLanMetrics,
-                    icon = icon
-                )
-
-
-                AnimatedVisibility(visible = isShareLanMetricsEnabled) {
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    SettingsSwitchComp(
-                        name = R.string.share_anonymous_app_usage,
-                        isChecked = isShareAppUsageEnabled,
-                        onCheckedChange = onChangeShareAppUsage
-                    )
-                }
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsClickableComp(
-                    name = R.string.more_info,
-                    icon = LANShieldIcons.OpenInNewOutlined,
-                    iconDesc = R.string.more_info,
-                    onClick = { uriHandler.openUri(STUDY_MORE_INFO_URL) }
-                )
             }
             SettingsGroup(name = R.string.about) {
                 SettingsClickableComp(
@@ -568,13 +428,6 @@ internal fun SettingsScreen(
                     icon = LANShieldIcons.FeedbackOutlined,
                     iconDesc = R.string.give_feedback,
                     onClick = { uriHandler.openUri(FEEDBACK_URL) }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                SettingsClickableComp(
-                    name = R.string.privacy_policy,
-                    icon = LANShieldIcons.OpenInNewOutlined,
-                    iconDesc = R.string.app_name,
-                    onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 SettingsClickableComp(

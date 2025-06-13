@@ -4,8 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.util.trace
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.navigation.NavDestination
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -13,11 +11,6 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navOptions
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import org.distrinet.lanshield.INTRO_COMPLETED_KEY
-import org.distrinet.lanshield.SHARE_APP_USAGE_KEY
 import org.distrinet.lanshield.navigation.TopLevelDestination
 import org.distrinet.lanshield.navigation.TopLevelDestination.LAN_TRAFFIC
 import org.distrinet.lanshield.navigation.TopLevelDestination.OVERVIEW
@@ -28,7 +21,6 @@ import org.distrinet.lanshield.ui.overview.OVERVIEW_ROUTE
 import org.distrinet.lanshield.ui.overview.navigateToOverview
 import org.distrinet.lanshield.ui.settings.SETTINGS_ROUTE
 import org.distrinet.lanshield.ui.settings.navigateToSettings
-import javax.inject.Inject
 
 @Composable
 fun rememberLANShieldAppState(

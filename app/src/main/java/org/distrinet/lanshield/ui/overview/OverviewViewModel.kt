@@ -11,11 +11,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.distrinet.lanshield.DEFAULT_POLICY_KEY
+import org.distrinet.lanshield.Policy
+import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
 import org.distrinet.lanshield.VPN_SERVICE_ACTION
 import org.distrinet.lanshield.VPN_SERVICE_STATUS
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
-import org.distrinet.lanshield.Policy
-import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
 import javax.inject.Inject
 
 @HiltViewModel

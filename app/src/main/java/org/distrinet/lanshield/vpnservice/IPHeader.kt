@@ -36,7 +36,7 @@ class IPHeader(packetBuffer: ByteBuffer) {
         }
     }
 
-    public fun hasPayloadForDpi(): Boolean {
+    fun hasPayloadForDpi(): Boolean {
         return canDoDpi
     }
 
@@ -150,6 +150,6 @@ class IPHeader(packetBuffer: ByteBuffer) {
             return "date;packageName;transportProto;transportProtoStr;sourceIP;sourcePort;destinationIP;destinationPort;"
         }
 
-        public val IPPROTO_HOPOPTS = 0
+        val IPPROTO_HOPOPTS = 0
     }
 }

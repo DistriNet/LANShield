@@ -1,9 +1,3 @@
-//import com.google.fire[DELETEME]base.crashlytics.buildtools.gradle.CrashlyticsExtension
-
-val useFirebase: Boolean by lazy {
-    gradle.startParameter.taskRequests.toString().contains("playStore", ignoreCase = true)
-}
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
@@ -12,10 +6,6 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-if(useFirebase) {
-//    apply(plugin = "com.google.gms.go[DELETEME]ogle-services")
-//    apply(plugin = "com.google.fire[DELETEME]base.crashlytics")
-}
 
 android {
     namespace = "org.distrinet.lanshield"
@@ -26,17 +16,11 @@ android {
         minSdk = 29
         targetSdk = 35
         versionCode = 14
-        versionName = "0.93"
+        versionName = "0.93-PETS-2025"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
-        }
-        externalNativeBuild {
-            cmake {
-                cppFlags += "-g"
-                cFlags += "-g"
-            }
         }
     }
 
@@ -53,15 +37,6 @@ android {
             )
             signingConfig = signingConfigs.getByName("debug")
 
-            if(useFirebase) {
-//                configure<CrashlyticsExtension> {
-//                    // Enable processing and uploading of native symbols to Firebase servers.
-//                    // By default, this is disabled to improve build speeds.
-//                    // This flag must be enabled to see properly-symbolicated native
-//                    // stack traces in the Crashlytics dashboard.
-//                    nativeSymbolUploadEnabled = true
-//                }
-            }
         }
 
         debug {
@@ -107,12 +82,6 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/jni/CMakeLists.txt")
-            version = "3.22.1"
         }
     }
 }

@@ -2,11 +2,9 @@ package org.distrinet.lanshield.vpnservice
 
 import android.app.Notification
 import android.app.PendingIntent
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
-import android.net.IpPrefix
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -17,6 +15,7 @@ import androidx.datastore.core.IOException
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
 import androidx.lifecycle.asLiveData
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -25,24 +24,20 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.distrinet.lanshield.DEFAULT_POLICY_KEY
+import org.distrinet.lanshield.MainActivity
+import org.distrinet.lanshield.Policy
+import org.distrinet.lanshield.Policy.ALLOW
+import org.distrinet.lanshield.Policy.BLOCK
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.SERVICE_NOTIFICATION_CHANNEL_ID
 import org.distrinet.lanshield.SYSTEM_APPS_POLICY_KEY
-import org.distrinet.lanshield.ALLOW_MULTICAST
-import org.distrinet.lanshield.ALLOW_DNS
-import org.distrinet.lanshield.HIDE_DNS_NOT
-import org.distrinet.lanshield.HIDE_MULTICAST_NOT
-import org.distrinet.lanshield.MainActivity
-import org.distrinet.lanshield.VPN_SERVICE_STATUS
-import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
-import org.distrinet.lanshield.database.model.LanAccessPolicy
-import org.distrinet.lanshield.Policy
-import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
 import org.distrinet.lanshield.TAG
+import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
+import org.distrinet.lanshield.VPN_SERVICE_STATUS
 import org.distrinet.lanshield.database.dao.LANShieldSessionDao
+import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.database.model.LANShieldSession
-import tech.httptoolkit.android.vpn.socket.IProtectSocket
-import tech.httptoolkit.android.vpn.socket.SocketProtector
+import org.distrinet.lanshield.database.model.LanAccessPolicy
 import java.net.InetAddress
 import java.net.NetworkInterface
 import javax.inject.Inject
@@ -52,7 +47,7 @@ const val TUN_IP4_ADDRESS = "10.215.173.1"
 const val TUN_IP6_ADDRESS = "fd00:2:fd00:1:fd00:1:fd00:1"
 
 @AndroidEntryPoint
-class VPNService : VpnService(), IProtectSocket {
+class VPNService : VpnService() {
     private var vpnRunnable: VPNRunnable? = null
     private var vpnInterface: ParcelFileDescriptor? = null
     private var vpnThread: Thread? = null
@@ -60,10 +55,6 @@ class VPNService : VpnService(), IProtectSocket {
     private lateinit var accessPolicies: LiveData<List<LanAccessPolicy>>
     private lateinit var defaultForwardPolicyLive: LiveData<Policy>
     private lateinit var systemAppsForwardPolicyLive: LiveData<Policy>
-    private lateinit var allowMulticastLive: LiveData<Boolean>
-    private lateinit var allowDnsLive: LiveData<Boolean>
-    private lateinit var hideMulticastNotLive: LiveData<Boolean>
-    private lateinit var hideDnsNotLive: LiveData<Boolean>
 
     private var isVPNRunning = false
 
@@ -91,6 +82,55 @@ class VPNService : VpnService(), IProtectSocket {
         const val STOP_VPN_SERVICE = "STOP_VPN_SERVICE"
     }
 
+    @Volatile
+    private var defaultForwardPolicy = ALLOW
+
+    @Volatile
+    private var systemAppsForwardPolicy = ALLOW
+
+    @Synchronized
+    fun reconfigureVPN() {
+        if(isVPNRunning) {
+            stopVPNThread()
+            startVPNThread()
+        }
+    }
+
+    @Synchronized
+    fun setDefaultForwardPolicy(policy: Policy) {
+        defaultForwardPolicy = policy
+        reconfigureVPN()
+    }
+
+    @Synchronized
+    fun setSystemAppsForwardPolicy(policy: Policy) {
+        systemAppsForwardPolicy = policy
+        reconfigureVPN()
+    }
+
+    @Volatile
+    private var accessPoliciesCache = HashMap<String, Policy>()
+
+    @Synchronized
+    private fun updateAccessPoliciesCache(newCache: HashMap<String, Policy>) {
+        accessPoliciesCache = newCache
+        accessPoliciesCache.forEach({
+            Log.i(TAG, "Policy cache entry, ${it.key}:${it.value}")
+        })
+        reconfigureVPN()
+    }
+
+    var accessPoliesObserver =
+        Observer<List<LanAccessPolicy>> { policies ->
+            val newCache = HashMap<String, Policy>()
+            policies.forEach {
+                newCache[it.packageName] = it.accessPolicy
+            }
+            updateAccessPoliciesCache(newCache)
+        }
+
+    var defaultPolicyObserver = Observer<Policy> { setDefaultForwardPolicy(it) }
+    var systemAppsPolicyObserver = Observer<Policy> { setSystemAppsForwardPolicy(it) }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         defaultForwardPolicyLive = dataStore.data.map {
@@ -104,24 +144,13 @@ class VPNService : VpnService(), IProtectSocket {
             )
         }.distinctUntilChanged().asLiveData()
 
-        allowMulticastLive = dataStore.data.map {
-            it[ALLOW_MULTICAST] ?: false
-        }.distinctUntilChanged().asLiveData()
-
-        allowDnsLive = dataStore.data.map {
-            it[ALLOW_DNS] ?: false
-        }.distinctUntilChanged().asLiveData()
-
-        hideMulticastNotLive = dataStore.data.map {
-            it[HIDE_MULTICAST_NOT] ?: false
-        }.distinctUntilChanged().asLiveData()
-
-        hideDnsNotLive = dataStore.data.map {
-            it[HIDE_DNS_NOT] ?: false
-        }.distinctUntilChanged().asLiveData()
-
 
         accessPolicies = lanAccessPolicyDao.getAllLive()
+
+        accessPolicies.observeForever(accessPoliesObserver)
+        defaultForwardPolicyLive.observeForever(defaultPolicyObserver)
+        systemAppsForwardPolicyLive.observeForever(systemAppsPolicyObserver)
+
 
         updateAlwaysOnStatus()
 
@@ -162,6 +191,10 @@ class VPNService : VpnService(), IProtectSocket {
     override fun onDestroy() {
         setVPNRunning(false)
         stopLanShieldSession()
+        accessPolicies.removeObserver(accessPoliesObserver)
+        defaultForwardPolicyLive.removeObserver(defaultPolicyObserver)
+        systemAppsForwardPolicyLive.removeObserver(systemAppsPolicyObserver)
+
         super.onDestroy()
     }
 
@@ -209,12 +242,7 @@ class VPNService : VpnService(), IProtectSocket {
     private fun stopVPNThread() {
         stopLanShieldSession()
 
-        vpnRunnable?.let {
-            accessPolicies.removeObserver(it.accessPoliesObserver)
-            defaultForwardPolicyLive.removeObserver(it.defaultPolicyObserver)
-            systemAppsForwardPolicyLive.removeObserver(it.systemAppsPolicyObserver)
-            it.stop()
-        }
+        vpnRunnable?.stop()
         vpnRunnable = null
 
 //        vpnThread?.join() //TODO -> shouldn't be required
@@ -276,16 +304,8 @@ class VPNService : VpnService(), IProtectSocket {
             .addRoute("5f00::", 16) // Segment Routing SIDs
             .addRoute("fc00::", 7) // Unique-Local
             .addRoute("fe80::", 10) // Link-Local Unicast
-            // PART 2, deprecated ranges that are not on the IANA overview but might
-            // still be used in practice
             .addRoute("fec0::", 10) // Site-local addresses
-            // PART 3, based on https://www.iana.org/assignments/ipv6-multicast-addresses/ipv6-multicast-addresses.xhtml
-            // Intercept all multicast destination. Ideally we would also exclude the global-scope
-            // multicast addresses here already, but that requires a higher API level, so instead
-            // we have to filter that address while processing packets.
             .addRoute("ff00::", 8)
-            // TODO: Filter global-scope multicast later on in the processing of packets.
-            // .excludeRoute("ff0e::", 16)
     }
 
     private fun getNetworkAddress(address: InetAddress, prefixLength: Short) : InetAddress {
@@ -300,12 +320,6 @@ class VPNService : VpnService(), IProtectSocket {
     }
 
     private fun addInterfaceAddressRoutes(builder: Builder) {
-        // TODO: This code is not re-run when switching (Wi-Fi) networks. For IPv4 this is likely not
-        // an issue, since usage of public IP addresses is uncommon in IPv4 networks. However, for
-        // IPv6, every network may use different addresses that are not captured by our IPv6 routes
-        // that are always installed. See how other VPNs do this and for starting points see:
-        // - https://stackoverflow.com/questions/6169059/android-event-for-internet-connectivity-state-change
-        // - https://medium.com/@veniamin.vynohradov/monitoring-internet-connection-state-in-android-da7ad915b5e5
         for (networkInterface in NetworkInterface.getNetworkInterfaces()) {
             if (networkInterface.isLoopback) continue
 
@@ -333,33 +347,44 @@ class VPNService : VpnService(), IProtectSocket {
         addIpv4Routes(builder)
         addIpv6Routes(builder)
         addInterfaceAddressRoutes(builder)
-        builder.addDisallowedApplication(packageName)
-            .setBlocking(true)
+            builder.setBlocking(true)
             .setMtu(MAX_PACKET_LEN)
             .setMetered(false)
-
+        Log.d(TAG, "Default forward policy: $defaultForwardPolicy")
+        if(defaultForwardPolicy == ALLOW){
+            accessPoliciesCache.filterValues { it == BLOCK }.keys.forEach {
+                Log.d(TAG, "Blocking LAN traffic from $it")
+                builder.addAllowedApplication(
+                    it
+                )
+            }
+        }
+        else if (defaultForwardPolicy == BLOCK) {
+            builder.addDisallowedApplication(packageName)
+            accessPoliciesCache.filterValues { it == ALLOW }.keys.forEach {
+                Log.d(TAG, "Allowing LAN traffic from $it")
+                builder.addDisallowedApplication(it)
+            }
+            if (systemAppsForwardPolicy == ALLOW) {
+                packageManager.getInstalledPackages(0)
+                    .filter { ((it.applicationInfo?.flags ?: 0) and ApplicationInfo.FLAG_SYSTEM) != 0 }
+                    .forEach {
+                        Log.d(TAG, "Allowing LAN traffic from system app $it")
+                        builder.addDisallowedApplication(it.packageName)
+                    }
+            }
+        }
         // establish() returns null if we no longer have permissions to establish the VPN somehow
         val vpnInterface = builder.establish() ?: return
 
         this.vpnInterface = vpnInterface
-        SocketProtector.getInstance().setProtector(this)
 
         vpnRunnable = VPNRunnable(vpnInterface, vpnNotificationManager, this)
-        accessPolicies.observeForever(vpnRunnable!!.accessPoliesObserver)
-        defaultForwardPolicyLive.observeForever(vpnRunnable!!.defaultPolicyObserver)
-        systemAppsForwardPolicyLive.observeForever(vpnRunnable!!.systemAppsPolicyObserver)
-        allowMulticastLive.observeForever(vpnRunnable!!.allowMulticastObserver)
-        allowDnsLive.observeForever(vpnRunnable!!.allowDnsObserver)
-        hideMulticastNotLive.observeForever(vpnRunnable!!.hideMulticastNotObserver)
-        hideDnsNotLive.observeForever(vpnRunnable!!.hideDnsNotObserver)
 
         vpnThread = Thread(vpnRunnable, "VPN thread")
 
         stopLanShieldSession()
         lanShieldSession = LANShieldSession.createLANShieldSession()
-        CoroutineScope(Dispatchers.IO).launch {
-            lanShieldSessionDao.insert(lanShieldSession!!)
-        }
         vpnThread!!.start()
         setVPNRunning(true)
     }
