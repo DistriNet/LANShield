@@ -7,9 +7,8 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import kotlinx.coroutines.flow.Flow
-import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.Policy
+import org.distrinet.lanshield.database.model.LanAccessPolicy
 
 @Dao
 interface LanAccessPolicyDao {

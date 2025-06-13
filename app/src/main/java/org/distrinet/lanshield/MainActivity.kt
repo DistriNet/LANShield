@@ -1,8 +1,5 @@
 package org.distrinet.lanshield
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.VpnService
@@ -15,35 +12,22 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
-import androidx.work.Constraints
-import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequest
-import androidx.work.OutOfQuotaPolicy
-import androidx.work.PeriodicWorkRequest
-import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import org.distrinet.lanshield.backendsync.SendToServerWorker
 import org.distrinet.lanshield.ui.LANShieldApp
 import org.distrinet.lanshield.ui.rememberLANShieldAppState
 import org.distrinet.lanshield.ui.theme.LANShieldTheme
 import org.distrinet.lanshield.vpnservice.VPNService
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 
@@ -117,50 +101,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        scheduleBackendSync()
-    }
-
-    private fun scheduleBackendSync() {
-        val production = true;
-        if(production) {
-            val constraints: Constraints =
-                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            val periodicWorkRequest = PeriodicWorkRequest.Builder(
-                SendToServerWorker::class.java,
-                BACKEND_SYNC_INTERVAL_DAYS, // repeat interval in x days
-                TimeUnit.DAYS
-            ).setConstraints(constraints).build()
-
-            val workManager = WorkManager.getInstance(this)
-
-            workManager.enqueueUniquePeriodicWork(
-                "lanshieldSyncWorker",
-                ExistingPeriodicWorkPolicy.KEEP,
-                periodicWorkRequest
-            )
-        }
-        else {
-            //        TODO: Following is for testing without waiting
-        val constraints: Constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val oneTimeWorkRequest = OneTimeWorkRequest.Builder(SendToServerWorker::class.java)
-            .setConstraints(constraints)
-            .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
-            .build()
-
-        val workManager = WorkManager.getInstance(this)
-
-        workManager.enqueueUniqueWork(
-            "backendSyncWorkerTest",  // Give a unique name for the test worker
-            ExistingWorkPolicy.REPLACE,  // Use REPLACE to ensure the work is run immediately
-            oneTimeWorkRequest
-        )
-        }
-
-
     }
 
     private suspend fun setDataStoreDefaults() {
@@ -171,19 +111,11 @@ class MainActivity : ComponentActivity() {
             }
 
             if (preferences[DEFAULT_POLICY_KEY] == null) {
-                preferences[DEFAULT_POLICY_KEY] = Policy.ALLOW.name
+                preferences[DEFAULT_POLICY_KEY] = Policy.BLOCK.name
             }
 
             if (preferences[SYSTEM_APPS_POLICY_KEY] == null) {
                 preferences[SYSTEM_APPS_POLICY_KEY] = Policy.ALLOW.name
-            }
-
-            if (preferences[SHARE_LAN_METRICS_KEY] == null) {
-                preferences[SHARE_LAN_METRICS_KEY] = false
-            }
-
-            if (preferences[SHARE_APP_USAGE_KEY] == null) {
-                preferences[SHARE_APP_USAGE_KEY] = false
             }
 
             if (preferences[AUTOSTART_ENABLED] == null) {

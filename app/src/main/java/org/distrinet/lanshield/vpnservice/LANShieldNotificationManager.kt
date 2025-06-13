@@ -10,7 +10,6 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.core.app.NotificationCompat
-import androidx.core.content.ContextCompat.getSystemService
 import androidx.core.graphics.drawable.toBitmap
 import org.distrinet.lanshield.LANShieldBroadcastReceiver
 import org.distrinet.lanshield.LANShieldIntentAction

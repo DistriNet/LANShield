@@ -51,11 +51,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.distrinet.lanshield.R
-import org.distrinet.lanshield.VPN_SERVICE_STATUS
+import org.distrinet.lanshield.ABOUT_LANSHIELD_URL
 import org.distrinet.lanshield.Policy
-import org.distrinet.lanshield.STUDY_MORE_INFO_URL
+import org.distrinet.lanshield.R
 import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
+import org.distrinet.lanshield.VPN_SERVICE_STATUS
 import org.distrinet.lanshield.ui.LANShieldIcons
 import org.distrinet.lanshield.ui.theme.LANShieldTheme
 
@@ -185,7 +185,7 @@ internal fun OverviewScreen(
             )
             val uriHandler = LocalUriHandler.current
             Button(
-                onClick = { uriHandler.openUri(STUDY_MORE_INFO_URL) },
+                onClick = { uriHandler.openUri(ABOUT_LANSHIELD_URL) },
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(vertical = 8.dp)
@@ -198,7 +198,7 @@ internal fun OverviewScreen(
                 isSwitchChecked && vpnServiceAlwaysOnStatus == VPN_ALWAYS_ON_STATUS.DISABLED,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             ) {
-                Column() {
+                Column {
 //                    Button(
 //                        onClick = { shouldShowAlwaysOnInfoDialog = true },
 //                        modifier = Modifier

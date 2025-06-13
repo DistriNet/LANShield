@@ -6,8 +6,6 @@ import android.content.Intent
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +15,6 @@ import kotlinx.coroutines.launch
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.vpnservice.LANShieldNotificationManager
-import org.distrinet.lanshield.vpnservice.VPNService
 import org.distrinet.lanshield.vpnservice.VPNServiceWorker
 import javax.inject.Inject
 
@@ -60,7 +57,7 @@ class LANShieldBroadcastReceiver : BroadcastReceiver() {
     private fun handleUpdateLanPolicy(context: Context, intent: Intent) {
         val policyString = intent.getStringExtra("${context.packageName}.${LANShieldIntentExtra.POLICY.name}") ?: return
         val packageName = intent.getStringExtra("${context.packageName}.${LANShieldIntentExtra.PACKAGE_NAME.name}") ?: return
-        val packageIsSystem = intent.getBooleanExtra("${context.packageName}.${LANShieldIntentExtra.PACKAGE_IS_SYSTEM.name}", false) ?: return
+        val packageIsSystem = intent.getBooleanExtra("${context.packageName}.${LANShieldIntentExtra.PACKAGE_IS_SYSTEM.name}", false)
         val policy = Policy.valueOf(policyString)
 
         GlobalScope.launch(Dispatchers.Default) {

@@ -1,10 +1,7 @@
 package org.distrinet.lanshield.database.model
 
-import android.icu.util.TimeZone
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import androidx.room.TypeConverters
-import org.distrinet.lanshield.database.dao.StringUUIDConverter
 import org.distrinet.lanshield.database.model.LANFlow.Companion.convertMillisToRFC8601
 import org.json.JSONObject
 import java.util.UUID

@@ -1,10 +1,6 @@
 package org.distrinet.lanshield.ui.lantraffic
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.os.Build
 import android.text.format.Formatter.formatShortFileSize
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
@@ -40,7 +36,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,13 +43,10 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -64,29 +56,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
-import androidx.core.graphics.drawable.toBitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.distrinet.lanshield.PACKAGE_NAME_ROOT
-import org.distrinet.lanshield.PACKAGE_NAME_SYSTEM
-import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
 import org.distrinet.lanshield.PackageMetadata
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.database.model.FlowAverage
 import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.ui.LANShieldIcons
+import org.distrinet.lanshield.ui.components.ExportFile
 import org.distrinet.lanshield.ui.components.LanShieldInfoDialog
 import org.distrinet.lanshield.ui.components.PackageIcon
-import org.distrinet.lanshield.ui.components.ExportFile
 import org.distrinet.lanshield.ui.theme.LANShieldTypography
 import org.distrinet.lanshield.ui.theme.LocalTintTheme
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
-import java.io.FileOutputStream
 import java.text.DateFormat
 import java.util.Date
 

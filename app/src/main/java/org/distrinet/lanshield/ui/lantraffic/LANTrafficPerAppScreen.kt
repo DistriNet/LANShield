@@ -28,9 +28,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,10 +63,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
 import org.distrinet.lanshield.PackageMetadata
-import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.RESERVED_PACKAGE_NAMES
+import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.ui.LANShieldIcons
 import org.distrinet.lanshield.ui.components.LanShieldInfoDialog
@@ -242,7 +239,6 @@ internal fun CardLANFlow(modifier: Modifier = Modifier, lanFlow: LANFlow) {
                 ))
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = stringResource(R.string.in_with_amount_bytes, bytesIncoming))
                 Text(text = stringResource(R.string.out_with_amount_bytes, bytesOutgoing))
             }
             val protocol = lanFlow.dpiProtocol ?: "Unknown" // nDPI will report 'Unknown' if no protocol is detected, don't change this

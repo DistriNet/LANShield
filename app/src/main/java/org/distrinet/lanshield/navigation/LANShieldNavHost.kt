@@ -10,7 +10,6 @@ import org.distrinet.lanshield.ui.lantraffic.lanTrafficPerAppScreen
 import org.distrinet.lanshield.ui.lantraffic.lanTrafficScreen
 import org.distrinet.lanshield.ui.lantraffic.navigateToLANTrafficPerApp
 import org.distrinet.lanshield.ui.overview.OVERVIEW_ROUTE
-import org.distrinet.lanshield.ui.overview.navigateToOverview
 import org.distrinet.lanshield.ui.overview.overviewScreen
 import org.distrinet.lanshield.ui.settings.lanAccessPoliciesScreen
 import org.distrinet.lanshield.ui.settings.navigateToLanAccessPolicies

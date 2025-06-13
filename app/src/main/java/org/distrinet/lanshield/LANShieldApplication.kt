@@ -5,46 +5,30 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
-import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.MutableLiveData
 import androidx.work.Configuration
-import androidx.work.Constraints
-import androidx.work.ListenableWorker
-import androidx.work.NetworkType
-import androidx.work.WorkerFactory
-import androidx.work.WorkerParameters
-import com.android.volley.RequestQueue
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import org.distrinet.lanshield.backendsync.AppUsageStats
-import org.distrinet.lanshield.backendsync.SendToServerWorker
 import org.distrinet.lanshield.database.AppDatabase
 import org.distrinet.lanshield.database.dao.FlowDao
 import org.distrinet.lanshield.database.dao.LANShieldSessionDao
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.vpnservice.LANShieldNotificationManager
-import tech.httptoolkit.android.TAG
 import javax.inject.Inject
 import javax.inject.Singleton
 
 const val FEEDBACK_URL = "https://forms.gle/zh2J3KMzZjMnv2Qi9"
-const val STUDY_MORE_INFO_URL = "https://lanshield.eu/user-study"
 const val ABOUT_LANSHIELD_URL = "https://lanshield.eu"
-const val PRIVACY_POLICY_URL = "https://lanshield.eu/privacy-policy"
 
 val NO_SYSTEM_OVERRIDE_PACKAGE_NAMES = listOf("com.android.chrome")
 
@@ -52,20 +36,6 @@ const val PACKAGE_NAME_UNKNOWN = "Unknown"
 const val PACKAGE_NAME_ROOT = "Root"
 const val PACKAGE_NAME_SYSTEM = "System"
 
-const val BACKEND_URL = "https://api.lanshield.eu"
-//const val BACKEND_URL = "http://192.168.157.147"
-//const val BACKEND_URL = "http://192.168.55.147:5000"
-
-
-const val ADD_FLOWS = "/add_flow"
-const val ADD_ACL = "/add_acl"
-const val ADD_APP_USAGE = "/add_app_usage"
-const val ADD_LANSHIELD_SESSION = "/add_session"
-const val GET_APP_INSTALLATION_UUID = "/get_app_installation_uuid"
-const val SHOULD_SYNC = "/should_sync"
-const val ACL_SUCCESS = "ACL uploaded successfully"
-const val APP_USAGE_SUCCESS = "App usage uploaded successfully"
-const val BACKEND_SYNC_INTERVAL_DAYS: Long = 1
 
 val RESERVED_PACKAGE_NAMES = listOf(PACKAGE_NAME_UNKNOWN, PACKAGE_NAME_ROOT, PACKAGE_NAME_SYSTEM)
 
@@ -74,18 +44,6 @@ const val PREFERENCES_STORE_NAME = "LANSHIELD_DATASTORE"
 val INTRO_COMPLETED_KEY = booleanPreferencesKey("intro_completed")
 val DEFAULT_POLICY_KEY = stringPreferencesKey("default_policy")
 val SYSTEM_APPS_POLICY_KEY = stringPreferencesKey("block_system_apps_policy")
-
-val SHARE_LAN_METRICS_KEY = booleanPreferencesKey("share_lan_metrics")
-val SHARE_APP_USAGE_KEY = booleanPreferencesKey("share_app_metrics")
-
-val APP_INSTALLATION_UUID = stringPreferencesKey("app_installation_uuid")
-
-val TIME_OF_LAST_SYNC = longPreferencesKey("time_of_last_sync")
-
-val ALLOW_MULTICAST = booleanPreferencesKey("allow_multicast")
-val ALLOW_DNS = booleanPreferencesKey("allow_dns")
-val HIDE_MULTICAST_NOT = booleanPreferencesKey("hide_multicast_not")
-val HIDE_DNS_NOT = booleanPreferencesKey("hide_dns_not")
 
 val AUTOSTART_ENABLED = booleanPreferencesKey("autostart_enabled")
 
@@ -200,35 +158,13 @@ fun isAppUsageAccessGranted(context: Context): Boolean {
 }
 
 @HiltAndroidApp
-class LANShieldApplication : Application(), Configuration.Provider {
-    @Inject
-    lateinit var workerFactory: SendToServerWorkerFactory
+class LANShieldApplication() : Application(), Configuration.Provider {
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
-            .setWorkerFactory(workerFactory)
             .build()
 }
 
-class SendToServerWorkerFactory @Inject constructor(
-    private val flowDao: FlowDao,
-    private val lanAccessPolicyDao: LanAccessPolicyDao,
-    private val lanShieldSessionDao: LANShieldSessionDao,
-    private val dataStore: DataStore<Preferences>
-) : WorkerFactory() {
-    override fun createWorker(
-        appContext: Context,
-        workerClassName: String,
-        workerParameters: WorkerParameters
-    ): ListenableWorker = SendToServerWorker(
-        context = appContext,
-        params = workerParameters,
-        flowDao = flowDao,
-        lanAccessPolicyDao = lanAccessPolicyDao,
-        lanShieldSessionDao = lanShieldSessionDao,
-        dataStore = dataStore
-    )
-}
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -242,12 +178,6 @@ object AppModule {
     @Singleton
     fun provideVPNServiceAlwaysOnStatus(): MutableLiveData<VPN_ALWAYS_ON_STATUS> {
         return vpnServiceAlwaysOnStatus
-    }
-
-    @Provides
-    @Singleton
-    fun provideAppUsageStats(): AppUsageStats{
-        return AppUsageStats()
     }
 
     @Provides

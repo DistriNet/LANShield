@@ -14,8 +14,6 @@ import kotlinx.coroutines.withContext
 import org.distrinet.lanshield.DEFAULT_POLICY_KEY
 import org.distrinet.lanshield.INTRO_COMPLETED_KEY
 import org.distrinet.lanshield.Policy
-import org.distrinet.lanshield.SHARE_APP_USAGE_KEY
-import org.distrinet.lanshield.SHARE_LAN_METRICS_KEY
 import org.distrinet.lanshield.vpnservice.LANShieldNotificationManager
 import javax.inject.Inject
 
@@ -24,10 +22,6 @@ class IntroViewModel  @Inject constructor(
     val dataStore: DataStore<Preferences>,
     val lanShieldNotificationManager: LANShieldNotificationManager) : ViewModel()  {
 
-    val shareLanMetricsEnabled =
-        dataStore.data.map { it[SHARE_LAN_METRICS_KEY] ?: false }.distinctUntilChanged()
-    val shareAppUsageEnabled =
-        dataStore.data.map { it[SHARE_APP_USAGE_KEY] ?: false }.distinctUntilChanged()
     val defaultPolicy =
         dataStore.data.map { Policy.valueOf(it[DEFAULT_POLICY_KEY] ?: Policy.DEFAULT.toString()) }
             .distinctUntilChanged()
@@ -44,14 +38,6 @@ class IntroViewModel  @Inject constructor(
 
     fun onChangeDefaultPolicy(policy: Policy) {
         writeToDataStore(DEFAULT_POLICY_KEY, policy.toString())
-    }
-
-    fun onChangeShareLanMetrics(enabled: Boolean) {
-        writeToDataStore(SHARE_LAN_METRICS_KEY, enabled)
-    }
-
-    fun onChangeShareAppUsage(enabled: Boolean) {
-        writeToDataStore(SHARE_APP_USAGE_KEY, enabled)
     }
 
     fun onChangeAppIntro(finished: Boolean) {

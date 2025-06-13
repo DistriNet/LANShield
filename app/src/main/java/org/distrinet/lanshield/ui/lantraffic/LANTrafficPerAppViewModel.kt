@@ -1,11 +1,9 @@
 package org.distrinet.lanshield.ui.lantraffic
 
-import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.distinctUntilChanged
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +18,6 @@ import org.distrinet.lanshield.database.dao.FlowDao
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.database.model.LanAccessPolicy
-import org.distrinet.lanshield.getPackageMetadata
 import javax.inject.Inject
 
 @HiltViewModel

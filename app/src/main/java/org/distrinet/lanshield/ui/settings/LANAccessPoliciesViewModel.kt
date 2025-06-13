@@ -8,9 +8,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.database.model.LanAccessPolicy
-import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.getPackageMetadata
 import java.util.SortedMap
 import javax.inject.Inject

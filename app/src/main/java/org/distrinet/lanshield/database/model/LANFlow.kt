@@ -1,25 +1,13 @@
 package org.distrinet.lanshield.database.model
 
-import android.content.Context
-import android.content.pm.PackageManager
-import android.net.ConnectivityManager
-import android.util.Log
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
-import org.distrinet.lanshield.PACKAGE_NAME_ROOT
-import org.distrinet.lanshield.PACKAGE_NAME_SYSTEM
 import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
 import org.distrinet.lanshield.Policy
-import org.distrinet.lanshield.TAG
 import org.distrinet.lanshield.database.dao.InetSocketAddressConverter
 import org.distrinet.lanshield.database.dao.StringListConverter
-import org.distrinet.lanshield.database.dao.StringUUIDConverter
-import org.distrinet.lanshield.getPackageNameFromUid
 import org.json.JSONObject
-import tech.httptoolkit.android.vpn.Session
-import java.math.BigInteger
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.time.Instant
 import java.time.ZoneId
@@ -127,29 +115,6 @@ data class LANFlow(
             )
         }
 
-        fun fromHttpToolkitSession(
-            session: Session,
-            packageName: String?,
-        ): LANFlow {
-
-            if (session.flow != null) {
-                throw IllegalArgumentException("Passed session already has an associated flow.")
-            }
-            val localIp = InetAddress.getByAddress(session.sourceIp.bytes)
-            val remoteIp = InetAddress.getByAddress(session.destIp.bytes)
-            val localEndpoint = InetSocketAddress(localIp, session.sourcePort)
-            val remoteEndpoint = InetSocketAddress(remoteIp, session.destPort)
-
-            val flow = createFlow(
-                appId = packageName,
-                remoteEndpoint = remoteEndpoint,
-                localEndpoint = localEndpoint,
-                transportLayerProtocol = session.protocol.name,
-                appliedPolicy = Policy.ALLOW
-            )
-            session.flow = flow
-            return flow
-        }
 
         fun convertMillisToRFC8601(millis: Long): String {
             val instant = Instant.ofEpochMilli(millis)
