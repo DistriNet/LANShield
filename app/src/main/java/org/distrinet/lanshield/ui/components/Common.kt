@@ -38,9 +38,11 @@ import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.distrinet.lanshield.PACKAGE_NAME_PLAY_SERVICES
 import org.distrinet.lanshield.PACKAGE_NAME_ROOT
 import org.distrinet.lanshield.PACKAGE_NAME_SYSTEM
 import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
+import org.distrinet.lanshield.PackageMetadata
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.database.model.LANFlow
@@ -148,6 +150,9 @@ fun PolicyFilterName(policy: Policy) {
 
 @Composable
 private fun UnknownPackageIcon(modifier: Modifier = Modifier, packageName: String) {
+    if ("android.uid.phone" in packageName) return Icon(LANShieldIcons.Android, PACKAGE_NAME_SYSTEM, modifier = modifier)
+    if ("com.google.uid.shared" in packageName) return Icon(LANShieldIcons.Android, PACKAGE_NAME_PLAY_SERVICES, modifier = modifier)
+
     when(packageName) {
         PACKAGE_NAME_ROOT -> Icon(LANShieldIcons.Tag, PACKAGE_NAME_ROOT, modifier = modifier)
         PACKAGE_NAME_SYSTEM -> Icon(LANShieldIcons.Android, PACKAGE_NAME_SYSTEM, modifier = modifier)

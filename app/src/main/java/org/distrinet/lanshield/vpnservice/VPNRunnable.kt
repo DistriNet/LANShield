@@ -1,6 +1,7 @@
 package org.distrinet.lanshield.vpnservice
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
@@ -25,6 +26,7 @@ import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.getPackageNameFromUid
+
 import tech.httptoolkit.android.vpn.ClientPacketWriter
 import tech.httptoolkit.android.vpn.SessionHandler
 import tech.httptoolkit.android.vpn.SessionManager
@@ -36,6 +38,7 @@ import java.io.InterruptedIOException
 import java.net.ConnectException
 import java.net.InetSocketAddress
 import java.nio.ByteBuffer
+import java.util.TreeSet
 
 // Set on our VPN as the MTU, which should guarantee all packets fit this
 const val MAX_PACKET_LEN = 1500
@@ -153,38 +156,6 @@ class VPNRunnable(
     var hideMulticastNotObserver = Observer<Boolean> { hideMulticastNot = it }
     var hideDnsNotObserver = Observer<Boolean> { hideDnsNot = it }
 
-    private fun findOpenPorts() {
-        val pm = context.packageManager
-        val wildcard = InetSocketAddress("0.0.0.0", 0)
-        val openPortsTcp : MutableMap<Int, Pair<Int, String>> = HashMap()
-        val openPortsUdp : MutableMap<Int, Pair<Int, String>> = HashMap()
-
-        for (port in 1..65535) {
-            val localAddr = InetSocketAddress("0.0.0.0", port)
-            var uid = connectivityManager.getConnectionOwnerUid(
-                IPPROTO_TCP,
-                localAddr,
-                wildcard
-            )
-            if (uid != INVALID_UID) {
-                val owner = getPackageNameFromUid(uid, pm)
-                Log.i(TAG, "Found open tcp port: $port, owner: $owner")
-                openPortsTcp[port] = Pair(uid, owner)
-            }
-            uid = connectivityManager.getConnectionOwnerUid(
-                IPPROTO_UDP,
-                localAddr,
-                wildcard
-            )
-            if (uid != INVALID_UID) {
-                val owner = getPackageNameFromUid(uid, pm)
-                Log.i(TAG, "Found open udp port: $port, owner: $owner")
-                openPortsUdp[port] = Pair(uid, owner)
-            }
-        }
-
-    }
-
 
     private fun logBlockedPacket(packetHeader: IPHeader, rawPacket: ByteBuffer, packageName: String) {
         val lanFlow = LANFlow.createFlow(
@@ -203,8 +174,8 @@ class VPNRunnable(
         }
     }
 
+
     override fun run() {
-//        findOpenPorts()
         if (threadMainLoopActive) {
             Log.w(TAG, "Vpn runnable started, but it's already running")
             return
@@ -337,7 +308,7 @@ class VPNRunnable(
             val appPackageName = getPackageNameFromUid(appUid, context.packageManager)
 
             val perAppPolicy = accessPoliciesCache.getOrDefault(appPackageName, DEFAULT)
-            val isSystemApp = getPackageMetadata(appPackageName, context).isSystem
+            val isSystemApp = getPackageMetadata(appPackageName, context.packageManager).isSystem
             var appliedPolicy = perAppPolicy
 
             if(perAppPolicy == DEFAULT) {

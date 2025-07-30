@@ -25,12 +25,13 @@ class LANAccessPoliciesViewModel @Inject constructor(val lanAccessPolicyDao: Lan
         showSystem: Boolean,
         context: Context
     ): LiveData<SortedMap<String, LanAccessPolicy>> {
+        val packageManager = context.packageManager
         return if (showSystem) lanAccessPolicyDao.getAllLive()
             .map { lanAccessPolicy ->
                 lanAccessPolicy.associateBy({
                     getPackageMetadata(
                         it.packageName,
-                        context
+                        packageManager
                     ).packageLabel
                 }, { it }).toSortedMap(String.CASE_INSENSITIVE_ORDER)
             }
@@ -39,7 +40,7 @@ class LANAccessPoliciesViewModel @Inject constructor(val lanAccessPolicyDao: Lan
                 lanAccessPolicy.associateBy({
                     getPackageMetadata(
                         it.packageName,
-                        context
+                        packageManager
                     ).packageLabel
                 }, { it }).toSortedMap(String.CASE_INSENSITIVE_ORDER)
             }

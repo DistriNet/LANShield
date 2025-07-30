@@ -110,4 +110,9 @@
     <string name="export">Export LAN Traffic</string>
     <string name="advanced">Advanced</string>
     <string name="general">General</string>
+    <string name="any_detected_open_ports_will_be_shown_here">Any detected open ports will be shown here</string>
+    <string name="no_open_ports_detected">No open ports detected</string>
+    <string name="open_ports">Open Ports</string>
+    <string name="open_ports_info">Here you can see a list of ports opened by other apps. These are typically used to communicate with other devices on the same local network, such as for device discovery or media streaming.</string>
+    <string name="pull_down_to_refresh">⬇ Pull down to refresh</string>
 </resources>

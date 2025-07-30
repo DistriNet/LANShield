@@ -89,7 +89,7 @@ internal fun LANTrafficPerAppRoute(
     val lanFlows: List<LANFlow> by viewModel.getLANFlows(packageName)
         .collectAsState(initial = listOf())
     val context = LocalContext.current
-    val packageMetadata = remember(packageName, context) { getPackageMetadata(packageName, context) }
+    val packageMetadata = remember(packageName, context) { getPackageMetadata(packageName, context.packageManager) }
     val accessPolicy by viewModel.getAccessPolicy(packageName).observeAsState(Policy.DEFAULT)
     val defaultPolicy by viewModel.defaultPolicy.collectAsStateWithLifecycle(initialValue = Policy.ALLOW)
     val scope = rememberCoroutineScope()

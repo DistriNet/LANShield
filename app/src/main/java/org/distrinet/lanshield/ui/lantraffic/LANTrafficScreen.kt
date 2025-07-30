@@ -1,13 +1,7 @@
 package org.distrinet.lanshield.ui.lantraffic
 
 import android.content.Context
-import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.os.Build
 import android.text.format.Formatter.formatShortFileSize
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,42 +15,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
-import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
-import androidx.compose.material3.SearchBarDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -64,29 +41,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.content.FileProvider
-import androidx.core.graphics.drawable.toBitmap
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.distrinet.lanshield.PACKAGE_NAME_ROOT
-import org.distrinet.lanshield.PACKAGE_NAME_SYSTEM
-import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
 import org.distrinet.lanshield.PackageMetadata
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.database.model.FlowAverage
 import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.getPackageMetadata
-import org.distrinet.lanshield.ui.LANShieldIcons
 import org.distrinet.lanshield.ui.components.LanShieldInfoDialog
 import org.distrinet.lanshield.ui.components.PackageIcon
 import org.distrinet.lanshield.ui.components.ExportFile
+import org.distrinet.lanshield.ui.components.LANShieldCombinedTopBar
 import org.distrinet.lanshield.ui.theme.LANShieldTypography
 import org.distrinet.lanshield.ui.theme.LocalTintTheme
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
-import java.io.FileOutputStream
 import java.text.DateFormat
 import java.util.Date
 
@@ -226,134 +191,6 @@ private fun PerAppCard(
 }
 
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun LanTrafficTopBar(
-    modifier: Modifier = Modifier,
-    scrollBehavior: TopAppBarScrollBehavior,
-    showSearchBar: () -> Unit,
-    isExportEnabled:() -> Boolean,
-    onClickShowHelpDialog: () -> Unit,
-    onClickExportLANTraffic: () -> Unit,
-) {
-
-    CenterAlignedTopAppBar(
-        modifier = modifier,
-        scrollBehavior = scrollBehavior,
-        title = { Text(text = stringResource(id = R.string.lan_traffic)) },
-        colors = TopAppBarDefaults.centerAlignedTopAppBarColors(),
-        navigationIcon = {
-            IconButton(onClick = showSearchBar) {
-                Icon(LANShieldIcons.Search, stringResource(id = R.string.search))
-            }
-        },
-        actions = {
-            IconButton(onClick = onClickExportLANTraffic, enabled = isExportEnabled.invoke()) {
-                Icon(LANShieldIcons.Export, stringResource(id = R.string.export))
-            }
-            IconButton(onClick = onClickShowHelpDialog) {
-                Icon(LANShieldIcons.Help, null)
-            }
-        }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun LanTrafficSearchBar(
-    onHideSearchBar: () -> Unit,
-    searchQuery: String,
-    setSearchQuery: (String) -> Unit,
-) {
-    val focusRequester = remember { FocusRequester() }
-    val keyboardController = LocalSoftwareKeyboardController.current
-
-
-
-    SearchBar(modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 12.dp), expanded = false, onExpandedChange = {}, inputField = {
-        SearchBarDefaults.InputField(
-            modifier = Modifier
-                .focusRequester(focusRequester)
-                .onKeyEvent {
-                    if (it.key == Key.Enter) {
-                        keyboardController?.hide()
-                        true
-                    } else {
-                        false
-                    }
-                },
-            query = searchQuery,
-            onQueryChange = { setSearchQuery(it) },
-            onSearch = { keyboardController?.hide() },
-            expanded = false,
-            onExpandedChange = {},
-            leadingIcon = {
-                IconButton(onClick = onHideSearchBar) {
-                    Icon(imageVector = LANShieldIcons.ArrowBack, contentDescription = null)
-                }
-            },
-            trailingIcon = {
-                if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { setSearchQuery("") }) {
-                        Icon(
-                            imageVector = LANShieldIcons.Close,
-                            contentDescription = stringResource(id = R.string.cancel_search)
-                        )
-                    }
-                }
-            }
-        )
-    }) {}
-
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-internal fun LanTrafficCombinedTopBar(
-    searchQuery: String,
-    setSearchQuery: (String) -> Unit,
-    scrollBehavior: TopAppBarScrollBehavior,
-    onClickShowHelpDialog: () -> Unit,
-    onClickExportLANTraffic: () -> Unit,
-    isExportEnabled: () -> Boolean
-) {
-    var showSearchBar by remember { mutableStateOf(false) }
-
-    BackHandler(enabled = showSearchBar) {
-        setSearchQuery("")
-        showSearchBar = false
-    }
-
-
-    Crossfade(targetState = showSearchBar, label = "LanTrafficTopBar") {
-        when (it) {
-            true -> LanTrafficSearchBar(
-                searchQuery = searchQuery,
-                setSearchQuery = setSearchQuery,
-                onHideSearchBar = {
-                    setSearchQuery("")
-                    showSearchBar = false
-                })
-
-            false -> LanTrafficTopBar(
-                modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-                showSearchBar = { showSearchBar = true },
-                onClickShowHelpDialog = onClickShowHelpDialog,
-                onClickExportLANTraffic = onClickExportLANTraffic,
-                scrollBehavior = scrollBehavior,
-                isExportEnabled = isExportEnabled,
-            )
-
-        }
-    }
-}
-
-
 @Composable
 private fun EmptyState(modifier: Modifier = Modifier) {
     Column(
@@ -399,14 +236,15 @@ internal fun processFlowAverages(
     context: Context
 ):
         List<ProcessedFlowAverage> {
+    val packageManager = context.packageManager
     if (searchQuery.isNotEmpty()) {
-        return flowAverages.map { ProcessedFlowAverage(getPackageMetadata(it.appId, context), it) }
+        return flowAverages.map { ProcessedFlowAverage(getPackageMetadata(it.appId, packageManager), it) }
             .filter {
                 it.packageMetadata.packageLabel.contains(searchQuery, ignoreCase = true) or
                         it.packageMetadata.packageName.contains(searchQuery, ignoreCase = true)
             }.toList()
     }
-    return flowAverages.map { ProcessedFlowAverage(getPackageMetadata(it.appId, context), it) }
+    return flowAverages.map { ProcessedFlowAverage(getPackageMetadata(it.appId, packageManager), it) }
         .toList()
 }
 
@@ -430,13 +268,14 @@ internal fun LANTrafficScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            LanTrafficCombinedTopBar(
+            LANShieldCombinedTopBar(
                 scrollBehavior = scrollBehavior,
                 searchQuery = searchQuery,
+                titleId = R.string.lan_traffic,
                 setSearchQuery = { searchQuery = it },
                 onClickShowHelpDialog = { showHelpDialog = true },
-                onClickExportLANTraffic = { exportLanTraffic = true },
-                isExportEnabled = {allFlows.isNotEmpty()}
+                onClickExport = { exportLanTraffic = true },
+                isExportEnabled = allFlows.isNotEmpty()
             )
         }) { innerPadding ->
         if (showHelpDialog) {
@@ -457,7 +296,7 @@ internal fun LANTrafficScreen(
             modifier = Modifier
                 .nestedScroll(scrollBehavior.nestedScrollConnection)
                 .padding(innerPadding),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             items(
                 processedFlowAverages,
@@ -465,12 +304,12 @@ internal fun LANTrafficScreen(
                 PerAppCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 12.dp, horizontal = 8.dp)
+                        .padding(horizontal = 8.dp)
                         .animateItem(),
                     processedFlowAverage = it,
                     onNavigateToLANTrafficPerApp = onNavigateToLANTrafficPerApp
                 )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+//                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             }
         }
         if (flowAverages.isEmpty()) {

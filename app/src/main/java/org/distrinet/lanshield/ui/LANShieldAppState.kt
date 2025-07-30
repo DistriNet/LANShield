@@ -21,9 +21,12 @@ import org.distrinet.lanshield.SHARE_APP_USAGE_KEY
 import org.distrinet.lanshield.navigation.TopLevelDestination
 import org.distrinet.lanshield.navigation.TopLevelDestination.LAN_TRAFFIC
 import org.distrinet.lanshield.navigation.TopLevelDestination.OVERVIEW
+import org.distrinet.lanshield.navigation.TopLevelDestination.OPEN_PORTS
 import org.distrinet.lanshield.navigation.TopLevelDestination.SETTINGS
 import org.distrinet.lanshield.ui.lantraffic.LAN_TRAFFIC_ROUTE
 import org.distrinet.lanshield.ui.lantraffic.navigateToLANTraffic
+import org.distrinet.lanshield.ui.openports.OPEN_PORTS_ROUTE
+import org.distrinet.lanshield.ui.openports.navigateToOpenPorts
 import org.distrinet.lanshield.ui.overview.OVERVIEW_ROUTE
 import org.distrinet.lanshield.ui.overview.navigateToOverview
 import org.distrinet.lanshield.ui.settings.SETTINGS_ROUTE
@@ -59,6 +62,7 @@ class LANShieldAppState(
         @Composable get() = when (currentDestination?.route) {
             OVERVIEW_ROUTE -> OVERVIEW
             LAN_TRAFFIC_ROUTE -> LAN_TRAFFIC
+            OPEN_PORTS_ROUTE -> OPEN_PORTS
             SETTINGS_ROUTE -> SETTINGS
             else -> null
         }
@@ -96,6 +100,7 @@ class LANShieldAppState(
             when (topLevelDestination) {
                 OVERVIEW -> navController.navigateToOverview(topLevelNavOptions)
                 LAN_TRAFFIC -> navController.navigateToLANTraffic(topLevelNavOptions)
+                OPEN_PORTS -> navController.navigateToOpenPorts(topLevelNavOptions)
                 SETTINGS -> navController.navigateToSettings(topLevelNavOptions)
             }
         }

@@ -28,7 +28,7 @@ add_library(ndpi SHARED ${ndpiSources})
 
 
 add_library(lanshield-dpi SHARED
-        lanshield-dpi.c test-native.c)
+        lanshield-dpi.c)
 
 target_link_libraries(lanshield-dpi
         # List libraries link to the target library

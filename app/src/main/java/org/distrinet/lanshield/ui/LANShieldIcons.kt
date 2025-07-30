@@ -9,6 +9,7 @@ import androidx.compose.material.icons.outlined.Feedback
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Lan
+import androidx.compose.material.icons.outlined.Policy
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Android
 import androidx.compose.material.icons.rounded.Block
@@ -26,6 +27,7 @@ import androidx.compose.material.icons.rounded.Mood
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.Policy
 import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Science
@@ -42,8 +44,6 @@ import androidx.compose.material.icons.rounded.Warning
 object LANShieldIcons {
     val Home = Icons.Rounded.Home
     val HomeOutlined = Icons.Outlined.Home
-    val Hub = Icons.Rounded.Hub
-    val HubOutlined = Icons.Outlined.Hub
     val Lan = Icons.Rounded.Lan
     val LanOutlined = Icons.Outlined.Lan
     val Info = Icons.Rounded.Info
@@ -72,8 +72,8 @@ object LANShieldIcons {
     val Block = Icons.Rounded.Block
     val ChevronLeft = Icons.Rounded.ChevronLeft
     val ExpandCircleDown = Icons.Outlined.ExpandCircleDown
-
-
+    val Policy = Icons.Rounded.Policy
+    val PolicyOutlined = Icons.Outlined.Policy
 }
 
 
