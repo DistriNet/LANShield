@@ -30,10 +30,12 @@ import org.distrinet.lanshield.ADD_ACL
 import org.distrinet.lanshield.ADD_APP_USAGE
 import org.distrinet.lanshield.ADD_FLOWS
 import org.distrinet.lanshield.ADD_LANSHIELD_SESSION
+import org.distrinet.lanshield.ADD_OPEN_PORTS
 import org.distrinet.lanshield.APP_INSTALLATION_UUID
 import org.distrinet.lanshield.APP_USAGE_SUCCESS
 import org.distrinet.lanshield.BACKEND_URL
 import org.distrinet.lanshield.GET_APP_INSTALLATION_UUID
+import org.distrinet.lanshield.OPEN_PORTS_SUCCESS
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.SHARE_APP_USAGE_KEY
 import org.distrinet.lanshield.SHARE_LAN_METRICS_KEY
@@ -44,8 +46,10 @@ import org.distrinet.lanshield.crashreport.crashReporter
 import org.distrinet.lanshield.database.dao.FlowDao
 import org.distrinet.lanshield.database.dao.LANShieldSessionDao
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
+import org.distrinet.lanshield.database.dao.OpenPortsDao
 import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.database.model.LANShieldSession
+import org.distrinet.lanshield.database.model.OpenPorts
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -57,12 +61,13 @@ import java.util.concurrent.TimeUnit
 
 
 @HiltWorker
-class SendToServerWorker @AssistedInject constructor(
+class SendToServerWorkerr @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     @Assisted private val flowDao: FlowDao,
     @Assisted private val lanAccessPolicyDao: LanAccessPolicyDao,
     @Assisted private val lanShieldSessionDao: LANShieldSessionDao,
+    @Assisted private val openPortsDao: OpenPortsDao,
     @Assisted private val dataStore: DataStore<Preferences>,
     private val appUsageStats: AppUsageStats = AppUsageStats(),
     private val queue: RequestQueue = Volley.newRequestQueue(context),
@@ -115,8 +120,13 @@ class SendToServerWorker @AssistedInject constructor(
 
             val sessions = lanShieldSessionDao.getAllShouldSync()
             syncLanShieldSessions(sessions)
+
+            val openPortsWithApps = openPortsDao.getAllShouldSync()
+            syncOpenPorts(openPortsWithApps)
         }
+
     }
+
 
     private fun setAppInstallationUUID() {
         val body = JSONObject()
@@ -137,6 +147,7 @@ class SendToServerWorker @AssistedInject constructor(
                     ADD_FLOWS -> handleAddFlowResponse(response)
                     SHOULD_SYNC -> handleShouldSyncResponse(response)
                     ADD_LANSHIELD_SESSION -> handleAddLanShieldSessionsResponse(response)
+                    ADD_OPEN_PORTS -> handleAddOpenPortsResponse(response)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -276,6 +287,21 @@ class SendToServerWorker @AssistedInject constructor(
 
     }
 
+    private fun handleAddOpenPortsResponse(response: JSONObject) {
+        try {
+            val message = response.getString("message")
+            if (message == OPEN_PORTS_SUCCESS) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    openPortsDao.deleteAll()
+                }
+            }
+        }
+        catch (e: Exception) {
+            crashReporter.recordException(e)
+            Log.e(TAG, e.toString())
+        }
+    }
+
 
     private fun handleAddLanShieldSessionsResponse(response: JSONObject) {
         val appUUID = response.getString("app_installation_uuid")
@@ -363,6 +389,25 @@ class SendToServerWorker @AssistedInject constructor(
 
         apiRequest(Request.Method.POST, ADD_LANSHIELD_SESSION, jsonBody)
     }
+
+    private suspend fun syncOpenPorts(openPortsWithApps: List<OpenPorts>) {
+        if (openPortsWithApps.isEmpty()) return
+        val appInstallationUUID = getAppInstallationUUID() ?: return
+
+        val jsonBody = JSONObject()
+        val openPortsJSONArray = JSONArray()
+
+        for (openPorts in openPortsWithApps) {
+            val openPortsJson = openPorts.toJSON()
+            openPortsJSONArray.put(openPortsJson)
+        }
+
+        jsonBody.put("app_installation_uuid", appInstallationUUID)
+        jsonBody.put("open_ports", openPortsJSONArray)
+
+        apiRequest(Request.Method.POST, ADD_OPEN_PORTS, jsonBody)
+    }
+
 
     private suspend fun syncAppUsage(appUsage: List<UsageStats>) {
         val jsonBody = JSONObject()

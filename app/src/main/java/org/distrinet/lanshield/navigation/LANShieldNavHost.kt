@@ -9,6 +9,7 @@ import org.distrinet.lanshield.ui.intro.introScreen
 import org.distrinet.lanshield.ui.lantraffic.lanTrafficPerAppScreen
 import org.distrinet.lanshield.ui.lantraffic.lanTrafficScreen
 import org.distrinet.lanshield.ui.lantraffic.navigateToLANTrafficPerApp
+import org.distrinet.lanshield.ui.openports.openPortsScreen
 import org.distrinet.lanshield.ui.overview.OVERVIEW_ROUTE
 import org.distrinet.lanshield.ui.overview.navigateToOverview
 import org.distrinet.lanshield.ui.overview.overviewScreen
@@ -35,6 +36,7 @@ fun LANShieldNavHost(
             )
         })
         lanTrafficPerAppScreen(navigateBack = { navController.popBackStack() })
+        openPortsScreen()
         settingsScreen(navigateToPerAppExceptions = { navController.navigateToLanAccessPolicies() })
         lanAccessPoliciesScreen(navigateBack = { navController.popBackStack() })
         introScreen(navigateToOverview = { navController.navigate(OVERVIEW_ROUTE) {

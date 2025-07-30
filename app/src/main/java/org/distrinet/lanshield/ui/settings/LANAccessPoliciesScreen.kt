@@ -96,6 +96,7 @@ internal fun LANAccessPoliciesRoute(
     var searchQuery by remember { mutableStateOf("") }
 
     val context = LocalContext.current
+    val packageManager = context.packageManager
 
     var installedAppsWithDefaultPolicy: SortedMap<String, LanAccessPolicy> by remember(showSystem) { mutableStateOf(TreeMap()) }
     val nonDefaultLanAccessPolicies: SortedMap<String, LanAccessPolicy> by viewModel.getLanAccessPolicies(true, context).observeAsState(initial = TreeMap())
@@ -104,11 +105,11 @@ internal fun LANAccessPoliciesRoute(
         nonDefaultLanAccessPolicies = nonDefaultLanAccessPolicies, policyFilter = policyFilter, searchQuery = searchQuery)
     LaunchedEffect(showSystem) {
         withContext(Dispatchers.IO) {
-            installedAppsWithDefaultPolicy = context.packageManager.getInstalledApplications(0).filter {
+            installedAppsWithDefaultPolicy = packageManager.getInstalledApplications(0).filter {
                 (!context.packageName!!.contentEquals(it.packageName)) and (showSystem or !applicationInfoIsSystem(
                     it
                 ))
-            }.associateBy({ getPackageMetadata(it.packageName, context).packageLabel },
+            }.associateBy({ getPackageMetadata(it.packageName, packageManager).packageLabel },
                 { packageInfoToLanAccessPolicy(it) }).toSortedMap()
         }
     }

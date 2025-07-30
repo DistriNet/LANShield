@@ -73,7 +73,8 @@ class LANShieldNotificationManager(private val context: Context) {
         }
 
         private fun createActiveNotification(packageName: String) : ActiveNotification {
-            val packageMetadata = getPackageMetadata(packageName, context)
+            val packageManager = context.packageManager
+            val packageMetadata = getPackageMetadata(packageName, packageManager)
             val blockIntent = createUpdatePolicyIntent(packageName = packageName, packageIsSystem = packageMetadata.isSystem, policy = Policy.BLOCK)
             val blockPendingIntent = PendingIntent.getBroadcast(context, getNewIntentRequestCode(), blockIntent,PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE)
             val allowIntent = createUpdatePolicyIntent(packageName = packageName, packageIsSystem = packageMetadata.isSystem, policy = Policy.ALLOW)
@@ -86,7 +87,7 @@ class LANShieldNotificationManager(private val context: Context) {
             val lanTrafficPerAppPendingIntent = PendingIntent.getActivity(context, 0, lanTrafficPerAppIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 
             val packageIcon : Bitmap? = try {
-                context.packageManager.getApplicationIcon(packageName).toBitmap(config = Bitmap.Config.ARGB_8888)
+                packageManager.getApplicationIcon(packageName).toBitmap(config = Bitmap.Config.ARGB_8888)
             } catch (e: PackageManager.NameNotFoundException) {
                 null
             }

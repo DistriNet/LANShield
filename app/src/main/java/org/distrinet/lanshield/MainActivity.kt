@@ -24,8 +24,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
+import androidx.work.ListenableWorker
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
+import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
@@ -38,7 +40,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import org.distrinet.lanshield.backendsync.SendToServerWorker
+import org.distrinet.lanshield.backendsync.OpenPortsWorker
+import org.distrinet.lanshield.backendsync.SendToServerWorkerr
 import org.distrinet.lanshield.ui.LANShieldApp
 import org.distrinet.lanshield.ui.rememberLANShieldAppState
 import org.distrinet.lanshield.ui.theme.LANShieldTheme
@@ -117,51 +120,51 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        scheduleBackendSync()
+//        scheduleWorker(
+//            workerClass = SendToServerWorkerr::class.java,
+//            repeatInterval = BACKEND_SYNC_INTERVAL_DAYS,
+//            repeatIntervalTimeUnit = TimeUnit.MINUTES,
+//            uniqueWorkName = "lanshieldSyncWorker")
+//        scheduleWorker(
+//            workerClass = OpenPortsWorker::class.java,
+//            repeatInterval = OPEN_PORT_SCAN_INTERVAL_HOURS,
+//            repeatIntervalTimeUnit = TimeUnit.HOURS,
+//            uniqueWorkName = "lanshieldScanOpenPortsWorker")
+
+        WorkManager.getInstance(this).cancelAllWork()
+        runWorkerInstantly<SendToServerWorkerr>()
     }
 
-    private fun scheduleBackendSync() {
-        val production = true;
-        if(production) {
-            val constraints: Constraints =
-                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                    .build()
-            val periodicWorkRequest = PeriodicWorkRequest.Builder(
-                SendToServerWorker::class.java,
-                BACKEND_SYNC_INTERVAL_DAYS, // repeat interval in x days
-                TimeUnit.DAYS
-            ).setConstraints(constraints).build()
-
-            val workManager = WorkManager.getInstance(this)
-
-            workManager.enqueueUniquePeriodicWork(
-                "lanshieldSyncWorker",
-                ExistingPeriodicWorkPolicy.KEEP,
-                periodicWorkRequest
-            )
-        }
-        else {
-            //        TODO: Following is for testing without waiting
-        val constraints: Constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val oneTimeWorkRequest = OneTimeWorkRequest.Builder(SendToServerWorker::class.java)
-            .setConstraints(constraints)
+    private inline fun <reified T : ListenableWorker> runWorkerInstantly() {
+        val request = OneTimeWorkRequestBuilder<T>()
             .setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
             .build()
 
+        WorkManager.getInstance(this).enqueue(request)
+    }
+
+    private fun scheduleWorker(workerClass: Class<out ListenableWorker?>,
+                               repeatInterval: Long,
+                               repeatIntervalTimeUnit: TimeUnit, uniqueWorkName: String) {
+        val constraints: Constraints =
+            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+        val periodicWorkRequest = PeriodicWorkRequest.Builder(
+            workerClass,
+            repeatInterval,
+            repeatIntervalTimeUnit
+        ).setConstraints(constraints).build()
+
         val workManager = WorkManager.getInstance(this)
 
-        workManager.enqueueUniqueWork(
-            "backendSyncWorkerTest",  // Give a unique name for the test worker
-            ExistingWorkPolicy.REPLACE,  // Use REPLACE to ensure the work is run immediately
-            oneTimeWorkRequest
+        workManager.enqueueUniquePeriodicWork(
+            uniqueWorkName,
+            ExistingPeriodicWorkPolicy.KEEP,
+            periodicWorkRequest
         )
-        }
-
-
     }
+
+
 
     private suspend fun setDataStoreDefaults() {
         dataStore.edit { preferences ->

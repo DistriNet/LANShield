@@ -22,6 +22,12 @@ enum class TopLevelDestination(
         iconTextId = R.string.lan_traffic,
         titleTextId = R.string.lan_traffic,
     ),
+    OPEN_PORTS(
+        selectedIcon = LANShieldIcons.Policy,
+        unselectedIcon = LANShieldIcons.PolicyOutlined,
+        iconTextId = R.string.open_ports,
+        titleTextId = R.string.open_ports,
+    ),
     SETTINGS(
         selectedIcon = LANShieldIcons.Settings,
         unselectedIcon = LANShieldIcons.SettingsOutlined,

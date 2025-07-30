@@ -2,7 +2,25 @@ package org.distrinet.lanshield.database.dao
 
 import androidx.room.TypeConverter
 import java.net.InetSocketAddress
+import java.util.SortedSet
+import java.util.TreeSet
 import java.util.UUID
+
+class SortedIntSetConverter {
+    @TypeConverter
+    fun fromSortedIntSet(sortedSet: SortedSet<Int>?): String {
+        return sortedSet?.joinToString(",") ?: ""
+    }
+
+    @TypeConverter
+    fun toSortedIntSet(data: String?): SortedSet<Int> {
+        if (data.isNullOrBlank()) return TreeSet()
+        return data.split(",")
+            .mapNotNull { it.toIntOrNull() }
+            .toCollection(TreeSet())
+    }
+}
+
 
 class StringListConverter {
     @TypeConverter

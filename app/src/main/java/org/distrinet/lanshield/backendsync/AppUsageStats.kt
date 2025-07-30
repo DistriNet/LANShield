@@ -35,7 +35,7 @@ class AppUsageStats {
             json.put("end_time",usageStat.lastTimeStamp)
             json.put("time_used", usageStat.totalTimeInForeground)
             json.put("time_visible", usageStat.totalTimeVisible)
-            json.put("is_system", packageNameIsSystem(usageStat.packageName, context))
+            json.put("is_system", packageNameIsSystem(usageStat.packageName, context.packageManager))
 
 
             return json

@@ -250,15 +250,17 @@ class LANShieldNavigationSuiteScope internal constructor(
 @ThemePreviews
 @Composable
 fun LANShieldNavigationBarPreview() {
-    val items = listOf("Overview", "LAN Traffic", "Settings")
+    val items = listOf("Overview", "LAN Traffic", "Open Ports", "Settings")
     val icons = listOf(
         LANShieldIcons.Home,
         LANShieldIcons.Lan,
+        LANShieldIcons.Policy,
         LANShieldIcons.Settings,
     )
     val selectedIcons = listOf(
         LANShieldIcons.HomeOutlined,
         LANShieldIcons.LanOutlined,
+        LANShieldIcons.PolicyOutlined,
         LANShieldIcons.SettingsOutlined,
     )
 
@@ -290,15 +292,17 @@ fun LANShieldNavigationBarPreview() {
 @ThemePreviews
 @Composable
 fun LANShieldNavigationRailPreview() {
-    val items = listOf("Overview", "LAN Traffic", "Settings")
+    val items = listOf("Overview", "LAN Traffic", "Open Ports", "Settings")
     val icons = listOf(
         LANShieldIcons.Home,
         LANShieldIcons.Lan,
+        LANShieldIcons.Policy,
         LANShieldIcons.Settings,
     )
     val selectedIcons = listOf(
         LANShieldIcons.HomeOutlined,
         LANShieldIcons.LanOutlined,
+        LANShieldIcons.PolicyOutlined,
         LANShieldIcons.SettingsOutlined,
     )
 

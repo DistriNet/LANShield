@@ -31,11 +31,13 @@ import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.distrinet.lanshield.backendsync.AppUsageStats
-import org.distrinet.lanshield.backendsync.SendToServerWorker
+import org.distrinet.lanshield.backendsync.OpenPortsWorker
+import org.distrinet.lanshield.backendsync.SendToServerWorkerr
 import org.distrinet.lanshield.database.AppDatabase
 import org.distrinet.lanshield.database.dao.FlowDao
 import org.distrinet.lanshield.database.dao.LANShieldSessionDao
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
+import org.distrinet.lanshield.database.dao.OpenPortsDao
 import org.distrinet.lanshield.vpnservice.LANShieldNotificationManager
 import tech.httptoolkit.android.TAG
 import javax.inject.Inject
@@ -51,6 +53,7 @@ val NO_SYSTEM_OVERRIDE_PACKAGE_NAMES = listOf("com.android.chrome")
 const val PACKAGE_NAME_UNKNOWN = "Unknown"
 const val PACKAGE_NAME_ROOT = "Root"
 const val PACKAGE_NAME_SYSTEM = "System"
+const val PACKAGE_NAME_PLAY_SERVICES = "Google Play Services"
 
 const val BACKEND_URL = "https://api.lanshield.eu"
 //const val BACKEND_URL = "http://192.168.157.147"
@@ -61,11 +64,15 @@ const val ADD_FLOWS = "/add_flow"
 const val ADD_ACL = "/add_acl"
 const val ADD_APP_USAGE = "/add_app_usage"
 const val ADD_LANSHIELD_SESSION = "/add_session"
+const val ADD_OPEN_PORTS = "/add_open_ports"
+
 const val GET_APP_INSTALLATION_UUID = "/get_app_installation_uuid"
 const val SHOULD_SYNC = "/should_sync"
+const val OPEN_PORTS_SUCCESS = "Open ports uploaded successfully"
 const val ACL_SUCCESS = "ACL uploaded successfully"
 const val APP_USAGE_SUCCESS = "App usage uploaded successfully"
 const val BACKEND_SYNC_INTERVAL_DAYS: Long = 1
+const val OPEN_PORT_SCAN_INTERVAL_HOURS: Long = 2
 
 val RESERVED_PACKAGE_NAMES = listOf(PACKAGE_NAME_UNKNOWN, PACKAGE_NAME_ROOT, PACKAGE_NAME_SYSTEM)
 
@@ -136,28 +143,29 @@ fun applicationInfoIsSystem(applicationInfo: ApplicationInfo) : Boolean {
     return isSystemInt != 0
 }
 
-fun packageNameIsSystem(packageName: String,context: Context): Boolean {
-    val applicationMetadata = getPackageMetadata(packageName, context)
+fun packageNameIsSystem(packageName: String, packageManager: PackageManager): Boolean {
+    val applicationMetadata = getPackageMetadata(packageName, packageManager)
     return applicationMetadata.isSystem
 }
 
 private val packageMetadataCache = mutableMapOf<String, PackageMetadata>()
 
-fun getPackageMetadata(packageName: String, context: Context) : PackageMetadata {
+fun getPackageMetadata(packageName: String, packageManager: PackageManager) : PackageMetadata {
     return packageMetadataCache.getOrPut(packageName) {
-        lookupPackageMetadata(packageName, context)
+        lookupPackageMetadata(packageName, packageManager)
     }
 }
 
-private fun lookupPackageMetadata(packageName: String, context: Context) : PackageMetadata {
+private fun lookupPackageMetadata(packageName: String, packageManager: PackageManager) : PackageMetadata {
     if(packageName.contentEquals(PACKAGE_NAME_UNKNOWN)) return PackageMetadata(packageName, PACKAGE_NAME_UNKNOWN, false)
     if(packageName.contentEquals(PACKAGE_NAME_ROOT)) return PackageMetadata(packageName, PACKAGE_NAME_ROOT, true)
     if(packageName.contentEquals(PACKAGE_NAME_SYSTEM)) return PackageMetadata(packageName, PACKAGE_NAME_SYSTEM, true)
+    if ("android.uid.phone" in packageName) return PackageMetadata(packageName, PACKAGE_NAME_SYSTEM, true)
+    if ("com.google.uid.shared" in packageName) return PackageMetadata(packageName, PACKAGE_NAME_PLAY_SERVICES, true)
 
     try {
-        val applicationInfo =
-            context.packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
-        val label = context.packageManager.getApplicationLabel(applicationInfo).toString()
+        val applicationInfo = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+        val label = packageManager.getApplicationLabel(applicationInfo).toString()
         val isSystem = applicationInfoIsSystem(applicationInfo)
         return PackageMetadata(packageName, label, isSystem)
     } catch (e: PackageManager.NameNotFoundException) {
@@ -166,23 +174,22 @@ private fun lookupPackageMetadata(packageName: String, context: Context) : Packa
 }
 
 fun getPackageNameFromUid(appUid: Int, packageManager: PackageManager): String {
-    when (appUid) {
-        0 -> return PACKAGE_NAME_ROOT
-        -1 -> return PACKAGE_NAME_UNKNOWN
-        1000 -> return PACKAGE_NAME_SYSTEM
+    return when (appUid) {
+        0 -> PACKAGE_NAME_ROOT
+        -1 -> PACKAGE_NAME_UNKNOWN
+        1000 -> PACKAGE_NAME_SYSTEM
+        else -> {
+            val packages = packageManager.getPackagesForUid(appUid)
+            if (packages != null && packages.size == 1) {
+                packages[0]
+            } else {
+                val sharedName = packageManager.getNameForUid(appUid) ?: return PACKAGE_NAME_UNKNOWN
+                return sharedName
+            }
+        }
     }
-
-    val appPackageName : String
-    val allPackages = packageManager.getPackagesForUid(appUid)
-    if(allPackages != null && allPackages.size == 1) {
-        appPackageName = allPackages[0]
-    }
-    else {
-        val sharedUidPackageName = packageManager.getNameForUid(appUid)
-        appPackageName = sharedUidPackageName ?: PACKAGE_NAME_UNKNOWN
-    }
-    return appPackageName
 }
+
 
 fun isAppUsageAccessGranted(context: Context): Boolean {
     try {
@@ -202,33 +209,49 @@ fun isAppUsageAccessGranted(context: Context): Boolean {
 @HiltAndroidApp
 class LANShieldApplication : Application(), Configuration.Provider {
     @Inject
-    lateinit var workerFactory: SendToServerWorkerFactory
+    lateinit var workerFactory: LANShieldWorkerFactory
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
+            .setMinimumLoggingLevel(Log.DEBUG)
             .build()
 }
 
-class SendToServerWorkerFactory @Inject constructor(
+class LANShieldWorkerFactory @Inject constructor(
     private val flowDao: FlowDao,
     private val lanAccessPolicyDao: LanAccessPolicyDao,
     private val lanShieldSessionDao: LANShieldSessionDao,
-    private val dataStore: DataStore<Preferences>
+    private val openPortsDao: OpenPortsDao,
+    private val dataStore: DataStore<Preferences>,
+    private val vpnServiceStatus: MutableLiveData<VPN_SERVICE_STATUS>
 ) : WorkerFactory() {
     override fun createWorker(
         appContext: Context,
         workerClassName: String,
         workerParameters: WorkerParameters
-    ): ListenableWorker = SendToServerWorker(
-        context = appContext,
-        params = workerParameters,
-        flowDao = flowDao,
-        lanAccessPolicyDao = lanAccessPolicyDao,
-        lanShieldSessionDao = lanShieldSessionDao,
-        dataStore = dataStore
-    )
+    ): ListenableWorker? {
+        return when (workerClassName) {
+            OpenPortsWorker::class.qualifiedName -> OpenPortsWorker(
+                appContext = appContext,
+                workerParams = workerParameters,
+                openPortsDao = openPortsDao,
+                vpnServiceStatus = vpnServiceStatus
+            )
+            SendToServerWorkerr::class.qualifiedName -> SendToServerWorkerr(
+                context = appContext,
+                params = workerParameters,
+                flowDao = flowDao,
+                lanAccessPolicyDao = lanAccessPolicyDao,
+                lanShieldSessionDao = lanShieldSessionDao,
+                openPortsDao = openPortsDao,
+                dataStore = dataStore
+            )
+            else -> null
+        }
+    }
 }
+
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -281,6 +304,11 @@ object AppModule {
     @Provides
     fun provideLanAccessPolicyDao(appDatabase: AppDatabase): LanAccessPolicyDao {
         return appDatabase.LanAccessPolicyDao()
+    }
+
+    @Provides
+    fun provideOpenPortsDao(appDatabase: AppDatabase): OpenPortsDao {
+        return appDatabase.OpenPortsDao()
     }
 
     @Singleton
