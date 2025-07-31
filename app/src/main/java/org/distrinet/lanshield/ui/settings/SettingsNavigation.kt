@@ -1,8 +1,5 @@
 package org.distrinet.lanshield.ui.settings
 
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -34,7 +31,7 @@ fun NavGraphBuilder.settingsScreen(navigateToPerAppExceptions: () -> Unit) {
 fun NavGraphBuilder.lanAccessPoliciesScreen(navigateBack: () -> Unit) {
     composable(
         route = SETTINGS_LAN_POLICIES,
-        ) { _ ->
+    ) { _ ->
         val viewModel = hiltViewModel<LANAccessPoliciesViewModel>()
         LANAccessPoliciesRoute(viewModel = viewModel, navigateBack = navigateBack)
     }

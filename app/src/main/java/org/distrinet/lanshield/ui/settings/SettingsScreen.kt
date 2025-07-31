@@ -1,9 +1,7 @@
 package org.distrinet.lanshield.ui.settings
 
-import android.app.AppOpsManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.provider.Settings
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
@@ -19,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -33,7 +30,6 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -458,7 +454,8 @@ internal fun SettingsScreen(
             }
 
             SettingsGroup(
-                name = R.string.general) {
+                name = R.string.general
+            ) {
                 SettingsClickableComp(
                     name = R.string.manage_notifications,
                     icon = LANShieldIcons.ChevronRight,
@@ -472,7 +469,8 @@ internal fun SettingsScreen(
                     onCheckedChange = onChangeAutoStart,
                 )
             }
-            SettingsGroup(name = R.string.lan_traffic_blocking,
+            SettingsGroup(
+                name = R.string.lan_traffic_blocking,
                 showMoreInfo = true,
                 onMoreInfoClick = { showLanBlockingMoreInfoDialog = true }) {
                 SettingsPolicy(

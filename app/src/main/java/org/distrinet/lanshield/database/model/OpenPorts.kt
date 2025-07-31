@@ -20,8 +20,7 @@ data class OpenPorts(
     var timeOpenPortsObserved: Long,
     var shouldSync: Boolean,
     var scheduledForDeletion: Boolean
-) : Comparable<OpenPorts>
-    {
+) : Comparable<OpenPorts> {
 
     override fun compareTo(other: OpenPorts): Int {
         return packageLabel.compareTo(other.packageLabel, ignoreCase = true)
@@ -41,20 +40,20 @@ data class OpenPorts(
         return json
     }
 
-        companion object {
-            fun createInstance(packageName: String, packageLabel: String) : OpenPorts {
-                return OpenPorts(
-                    packageLabel = packageLabel,
-                    packageName = packageName,
-                    tcpPorts = TreeSet(),
-                    udpPorts = TreeSet(),
-                    shouldSync = true,
-                    scheduledForDeletion = false,
-                    uuid = UUID.randomUUID(),
-                    timeOpenPortsObserved = System.currentTimeMillis()
-                )
-            }
+    companion object {
+        fun createInstance(packageName: String, packageLabel: String): OpenPorts {
+            return OpenPorts(
+                packageLabel = packageLabel,
+                packageName = packageName,
+                tcpPorts = TreeSet(),
+                udpPorts = TreeSet(),
+                shouldSync = true,
+                scheduledForDeletion = false,
+                uuid = UUID.randomUUID(),
+                timeOpenPortsObserved = System.currentTimeMillis()
+            )
         }
-
     }
+
+}
 

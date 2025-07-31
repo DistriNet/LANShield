@@ -1,11 +1,9 @@
 package org.distrinet.lanshield.vpnservice
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
-import android.os.Process.INVALID_UID
 import android.system.OsConstants.IPPROTO_TCP
 import android.system.OsConstants.IPPROTO_UDP
 import android.util.Log
@@ -26,7 +24,6 @@ import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.getPackageNameFromUid
-
 import tech.httptoolkit.android.vpn.ClientPacketWriter
 import tech.httptoolkit.android.vpn.SessionHandler
 import tech.httptoolkit.android.vpn.SessionManager
@@ -36,9 +33,7 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.ConnectException
-import java.net.InetSocketAddress
 import java.nio.ByteBuffer
-import java.util.TreeSet
 
 // Set on our VPN as the MTU, which should guarantee all packets fit this
 const val MAX_PACKET_LEN = 1500
@@ -56,7 +51,12 @@ class VPNRunnable(
 
         private val dpiLock = Any()
 
-        private external fun _doDPI(packet: ByteArray, packetSize: Int, packetOffset : Int, dpiResult: DpiResult): Int
+        private external fun _doDPI(
+            packet: ByteArray,
+            packetSize: Int,
+            packetOffset: Int,
+            dpiResult: DpiResult
+        ): Int
 
         external fun terminateNDPI()
 
@@ -80,7 +80,8 @@ class VPNRunnable(
     }
 
 
-    private val connectivityManager = context.getSystemService(VpnService.CONNECTIVITY_SERVICE) as ConnectivityManager
+    private val connectivityManager =
+        context.getSystemService(VpnService.CONNECTIVITY_SERVICE) as ConnectivityManager
 
     @Volatile
     private var threadMainLoopActive = false
@@ -98,7 +99,12 @@ class VPNRunnable(
 
     private val httpToolkitSessionManager = SessionManager(appDatabase)
     private val httpToolkitSessionHandler =
-        SessionHandler(httpToolkitSessionManager, nioServiceRunnable, vpnPacketWriterRunnable, appDatabase)
+        SessionHandler(
+            httpToolkitSessionManager,
+            nioServiceRunnable,
+            vpnPacketWriterRunnable,
+            appDatabase
+        )
 
     // Allocate the buffer for a single packet.
     private val packetBuffer = ByteBuffer.allocate(MAX_PACKET_LEN)
@@ -157,15 +163,22 @@ class VPNRunnable(
     var hideDnsNotObserver = Observer<Boolean> { hideDnsNot = it }
 
 
-    private fun logBlockedPacket(packetHeader: IPHeader, rawPacket: ByteBuffer, packageName: String) {
+    private fun logBlockedPacket(
+        packetHeader: IPHeader,
+        rawPacket: ByteBuffer,
+        packageName: String
+    ) {
         val lanFlow = LANFlow.createFlow(
-            appId = packageName, remoteEndpoint = packetHeader.destination, localEndpoint = packetHeader.source,
-            transportLayerProtocol = packetHeader.protocolNumberAsString(), appliedPolicy = BLOCK
+            appId = packageName,
+            remoteEndpoint = packetHeader.destination,
+            localEndpoint = packetHeader.source,
+            transportLayerProtocol = packetHeader.protocolNumberAsString(),
+            appliedPolicy = BLOCK
         )
         lanFlow.dataEgress = packetHeader.size.toLong()
         lanFlow.packetCountEgress = 1
         val dpiResult = getDpiResult(packetHeader, rawPacket)
-        if(dpiResult != null) {
+        if (dpiResult != null) {
             lanFlow.dpiReport = dpiResult.jsonBuffer
             lanFlow.dpiProtocol = dpiResult.protocolName
         }
@@ -194,16 +207,19 @@ class VPNRunnable(
         val packetBufferArray: ByteArray
         try {
             packetBufferArray = packetBuffer.array()
-        }
-        catch(_: Exception) {
-            Log.wtf(TAG,"packetBuffer not backed by array")
+        } catch (_: Exception) {
+            Log.wtf(TAG, "packetBuffer not backed by array")
             threadMainLoopActive = false
             return
         }
         while (threadMainLoopActive) {
             try {
                 packetBuffer.clear()
-                packetLength = vpnReadStream.read(packetBufferArray, packetBuffer.arrayOffset(), MAX_PACKET_LEN)
+                packetLength = vpnReadStream.read(
+                    packetBufferArray,
+                    packetBuffer.arrayOffset(),
+                    MAX_PACKET_LEN
+                )
 
                 if (packetLength > 0) {
                     try {
@@ -237,12 +253,10 @@ class VPNRunnable(
                             Log.e(TAG, e.toString())
                         }
                     }
-                }
-                else if (packetLength == 0) {
+                } else if (packetLength == 0) {
                     Thread.sleep(10)
                     Log.wtf(TAG, "vpnReadStream not configured as blocking!")
-                }
-                else {
+                } else {
                     threadMainLoopActive = false
                     Log.e(TAG, "TUN socket closed unexpected")
                 }
@@ -278,7 +292,7 @@ class VPNRunnable(
                     pkt.source,
                     pkt.destination
                 )
-                if(uid != 0 && uid != -1) {
+                if (uid != 0 && uid != -1) {
                     return uid
                 }
 
@@ -311,29 +325,35 @@ class VPNRunnable(
             val isSystemApp = getPackageMetadata(appPackageName, context.packageManager).isSystem
             var appliedPolicy = perAppPolicy
 
-            if(perAppPolicy == DEFAULT) {
-                if(defaultForwardPolicy != ALLOW && isSystemApp) { // System app
+            if (perAppPolicy == DEFAULT) {
+                if (defaultForwardPolicy != ALLOW && isSystemApp) { // System app
                     appliedPolicy = systemAppsForwardPolicy
                 }
                 if (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") { // Multicast
-                    val multicastPolicy = if (defaultForwardPolicy == BLOCK && !allowMulticast) BLOCK else ALLOW
-                    appliedPolicy = if(appliedPolicy == ALLOW) ALLOW else multicastPolicy
+                    val multicastPolicy =
+                        if (defaultForwardPolicy == BLOCK && !allowMulticast) BLOCK else ALLOW
+                    appliedPolicy = if (appliedPolicy == ALLOW) ALLOW else multicastPolicy
                 }
                 if (packetHeader.destination.port == 53) { // DNS
                     val dnsPolicy = if (defaultForwardPolicy == BLOCK && !allowDns) BLOCK else ALLOW
-                    appliedPolicy = if(appliedPolicy == ALLOW) ALLOW else dnsPolicy
+                    appliedPolicy = if (appliedPolicy == ALLOW) ALLOW else dnsPolicy
                 }
 
-                val isDnsNotificationHidden = defaultForwardPolicy == ALLOW && packetHeader.destination.port == 53 && hideDnsNot
-                val isMulticastNotificationHidden = defaultForwardPolicy == ALLOW && (packetHeader.destination.address.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") && hideMulticastNot
+                val isDnsNotificationHidden =
+                    defaultForwardPolicy == ALLOW && packetHeader.destination.port == 53 && hideDnsNot
+                val isMulticastNotificationHidden =
+                    defaultForwardPolicy == ALLOW && (packetHeader.destination.address.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") && hideMulticastNot
 
                 if (!isDnsNotificationHidden && !isMulticastNotificationHidden) {
-                    vpnNotificationManager.postNotification(packageName = appPackageName, appliedPolicy, packetHeader.destination)
+                    vpnNotificationManager.postNotification(
+                        packageName = appPackageName,
+                        appliedPolicy,
+                        packetHeader.destination
+                    )
                 }
             }
             return Pair(appliedPolicy, appPackageName)
-        }
-        else {
+        } else {
             if (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") {
                 val policy = if (defaultForwardPolicy == BLOCK && !allowMulticast) BLOCK else ALLOW
                 return Pair(policy, PACKAGE_NAME_UNKNOWN)

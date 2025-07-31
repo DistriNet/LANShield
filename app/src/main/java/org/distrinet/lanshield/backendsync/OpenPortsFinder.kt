@@ -14,10 +14,6 @@ import org.distrinet.lanshield.database.model.OpenPorts
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.getPackageNameFromUid
 import java.net.InetSocketAddress
-import java.security.KeyStore.TrustedCertificateEntry
-import java.util.SortedSet
-import java.util.TreeSet
-import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
 suspend fun findOpenPorts(

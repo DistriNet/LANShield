@@ -10,7 +10,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import org.distrinet.lanshield.BuildConfig
 import com.android.volley.DefaultRetryPolicy
 import com.android.volley.Request
 import com.android.volley.RequestQueue
@@ -34,6 +33,7 @@ import org.distrinet.lanshield.ADD_OPEN_PORTS
 import org.distrinet.lanshield.APP_INSTALLATION_UUID
 import org.distrinet.lanshield.APP_USAGE_SUCCESS
 import org.distrinet.lanshield.BACKEND_URL
+import org.distrinet.lanshield.BuildConfig
 import org.distrinet.lanshield.GET_APP_INSTALLATION_UUID
 import org.distrinet.lanshield.OPEN_PORTS_SUCCESS
 import org.distrinet.lanshield.Policy
@@ -91,7 +91,8 @@ class SendToServerWorkerr @AssistedInject constructor(
     private suspend fun sendRequestsRequiringUUID() {
         CoroutineScope(Dispatchers.IO).launch {
             val shareAppUsageEnabled =
-                dataStore.data.map { it[SHARE_APP_USAGE_KEY] ?: false }.distinctUntilChanged().first()
+                dataStore.data.map { it[SHARE_APP_USAGE_KEY] ?: false }.distinctUntilChanged()
+                    .first()
             if (shareAppUsageEnabled) {
                 var timeOfLastSync = dataStore.data.map { it[TIME_OF_LAST_SYNC] }.first()
                 if (timeOfLastSync == null) {
@@ -212,8 +213,7 @@ class SendToServerWorkerr @AssistedInject constructor(
                     }
                 }
             }
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             Log.e(TAG, e.toString())
             crashReporter.recordException(e)
         }
@@ -231,8 +231,7 @@ class SendToServerWorkerr @AssistedInject constructor(
         } catch (e: IllegalArgumentException) {
             Log.d(TAG, "UUID is of wrong format $e")
             crashReporter.recordException(e)
-        }
-        catch (e: JSONException) {
+        } catch (e: JSONException) {
             Log.e(TAG, e.toString())
             crashReporter.recordException(e)
         }
@@ -279,8 +278,7 @@ class SendToServerWorkerr @AssistedInject constructor(
                     lanAccessPolicyDao.setAllSynced()
                 }
             }
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             crashReporter.recordException(e)
             Log.e(TAG, e.toString())
         }
@@ -295,8 +293,7 @@ class SendToServerWorkerr @AssistedInject constructor(
                     openPortsDao.deleteAll()
                 }
             }
-        }
-        catch (e: Exception) {
+        } catch (e: Exception) {
             crashReporter.recordException(e)
             Log.e(TAG, e.toString())
         }
@@ -374,7 +371,7 @@ class SendToServerWorkerr @AssistedInject constructor(
     private suspend fun syncLanShieldSessions(
         sessions: List<LANShieldSession>
     ) {
-        if(sessions.isEmpty()) return
+        if (sessions.isEmpty()) return
         val appInstallationUUID = getAppInstallationUUID() ?: return
 
         val jsonBody = JSONObject()

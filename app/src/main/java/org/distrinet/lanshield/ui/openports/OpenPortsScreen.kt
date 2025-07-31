@@ -77,7 +77,13 @@ internal fun OpenPortsRoute(
     val isRefreshing by viewModel.isRefreshing.collectAsState()
     val context = LocalContext.current
 
-    OpenPortsScreen(modifier = modifier, appsWithPorts = appsWithPorts, isRefreshing = isRefreshing, onRefresh = { viewModel.refreshOpenPorts(context)}, vpnServiceStatus = vpnServiceStatus)
+    OpenPortsScreen(
+        modifier = modifier,
+        appsWithPorts = appsWithPorts,
+        isRefreshing = isRefreshing,
+        onRefresh = { viewModel.refreshOpenPorts(context) },
+        vpnServiceStatus = vpnServiceStatus
+    )
 }
 
 
@@ -135,8 +141,7 @@ internal fun OpenPortsScreen(
         ) {
             if (vpnServiceStatus != VPN_SERVICE_STATUS.ENABLED) {
                 LANShieldNotActive()
-            }
-            else if (filteredAppsWithPorts.isEmpty() and searchQuery.isEmpty()) {
+            } else if (filteredAppsWithPorts.isEmpty() and searchQuery.isEmpty()) {
                 EmptyStateOpenPorts()
             } else {
                 LazyColumn(
@@ -298,7 +303,8 @@ fun AppPortsCard(app: OpenPorts, isExpanded: Boolean, onToggleExpand: () -> Unit
 
 @Composable
 fun PortRow(port: Int, transportProto: String) {
-    val applicationProto = if (transportProto == "TCP") tcpPortToService[port] else udpPortToService[port]
+    val applicationProto =
+        if (transportProto == "TCP") tcpPortToService[port] else udpPortToService[port]
 
     Row(
         Modifier
@@ -335,7 +341,13 @@ fun PortRow(port: Int, transportProto: String) {
 @Preview(showBackground = true)
 @Composable
 fun OpenPortsScreenPreviewVPNDisabled() {
-    OpenPortsScreen(modifier = Modifier, appsWithPorts = emptyList(), isRefreshing = false, onRefresh = {}, VPN_SERVICE_STATUS.DISABLED)
+    OpenPortsScreen(
+        modifier = Modifier,
+        appsWithPorts = emptyList(),
+        isRefreshing = false,
+        onRefresh = {},
+        VPN_SERVICE_STATUS.DISABLED
+    )
 }
 
 

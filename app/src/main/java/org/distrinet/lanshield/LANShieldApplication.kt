@@ -11,19 +11,13 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
-import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.MutableLiveData
 import androidx.work.Configuration
-import androidx.work.Constraints
 import androidx.work.ListenableWorker
-import androidx.work.NetworkType
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
-import com.android.volley.RequestQueue
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -39,7 +33,6 @@ import org.distrinet.lanshield.database.dao.LANShieldSessionDao
 import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.database.dao.OpenPortsDao
 import org.distrinet.lanshield.vpnservice.LANShieldNotificationManager
-import tech.httptoolkit.android.TAG
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -137,9 +130,13 @@ data class PackageMetadata(
     val isSystem: Boolean
 )
 
-fun applicationInfoIsSystem(applicationInfo: ApplicationInfo) : Boolean {
-    if(applicationInfo.packageName != null && NO_SYSTEM_OVERRIDE_PACKAGE_NAMES.contains(applicationInfo.packageName)) return false
-    val isSystemInt = applicationInfo.flags and (ApplicationInfo.FLAG_UPDATED_SYSTEM_APP or ApplicationInfo.FLAG_SYSTEM)
+fun applicationInfoIsSystem(applicationInfo: ApplicationInfo): Boolean {
+    if (applicationInfo.packageName != null && NO_SYSTEM_OVERRIDE_PACKAGE_NAMES.contains(
+            applicationInfo.packageName
+        )
+    ) return false
+    val isSystemInt =
+        applicationInfo.flags and (ApplicationInfo.FLAG_UPDATED_SYSTEM_APP or ApplicationInfo.FLAG_SYSTEM)
     return isSystemInt != 0
 }
 
@@ -150,21 +147,45 @@ fun packageNameIsSystem(packageName: String, packageManager: PackageManager): Bo
 
 private val packageMetadataCache = mutableMapOf<String, PackageMetadata>()
 
-fun getPackageMetadata(packageName: String, packageManager: PackageManager) : PackageMetadata {
+fun getPackageMetadata(packageName: String, packageManager: PackageManager): PackageMetadata {
     return packageMetadataCache.getOrPut(packageName) {
         lookupPackageMetadata(packageName, packageManager)
     }
 }
 
-private fun lookupPackageMetadata(packageName: String, packageManager: PackageManager) : PackageMetadata {
-    if(packageName.contentEquals(PACKAGE_NAME_UNKNOWN)) return PackageMetadata(packageName, PACKAGE_NAME_UNKNOWN, false)
-    if(packageName.contentEquals(PACKAGE_NAME_ROOT)) return PackageMetadata(packageName, PACKAGE_NAME_ROOT, true)
-    if(packageName.contentEquals(PACKAGE_NAME_SYSTEM)) return PackageMetadata(packageName, PACKAGE_NAME_SYSTEM, true)
-    if ("android.uid.phone" in packageName) return PackageMetadata(packageName, PACKAGE_NAME_SYSTEM, true)
-    if ("com.google.uid.shared" in packageName) return PackageMetadata(packageName, PACKAGE_NAME_PLAY_SERVICES, true)
+private fun lookupPackageMetadata(
+    packageName: String,
+    packageManager: PackageManager
+): PackageMetadata {
+    if (packageName.contentEquals(PACKAGE_NAME_UNKNOWN)) return PackageMetadata(
+        packageName,
+        PACKAGE_NAME_UNKNOWN,
+        false
+    )
+    if (packageName.contentEquals(PACKAGE_NAME_ROOT)) return PackageMetadata(
+        packageName,
+        PACKAGE_NAME_ROOT,
+        true
+    )
+    if (packageName.contentEquals(PACKAGE_NAME_SYSTEM)) return PackageMetadata(
+        packageName,
+        PACKAGE_NAME_SYSTEM,
+        true
+    )
+    if ("android.uid.phone" in packageName) return PackageMetadata(
+        packageName,
+        PACKAGE_NAME_SYSTEM,
+        true
+    )
+    if ("com.google.uid.shared" in packageName) return PackageMetadata(
+        packageName,
+        PACKAGE_NAME_PLAY_SERVICES,
+        true
+    )
 
     try {
-        val applicationInfo = packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
+        val applicationInfo =
+            packageManager.getApplicationInfo(packageName, PackageManager.GET_META_DATA)
         val label = packageManager.getApplicationLabel(applicationInfo).toString()
         val isSystem = applicationInfoIsSystem(applicationInfo)
         return PackageMetadata(packageName, label, isSystem)
@@ -238,6 +259,7 @@ class LANShieldWorkerFactory @Inject constructor(
                 openPortsDao = openPortsDao,
                 vpnServiceStatus = vpnServiceStatus
             )
+
             SendToServerWorkerr::class.qualifiedName -> SendToServerWorkerr(
                 context = appContext,
                 params = workerParameters,
@@ -247,6 +269,7 @@ class LANShieldWorkerFactory @Inject constructor(
                 openPortsDao = openPortsDao,
                 dataStore = dataStore
             )
+
             else -> null
         }
     }
@@ -269,7 +292,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAppUsageStats(): AppUsageStats{
+    fun provideAppUsageStats(): AppUsageStats {
         return AppUsageStats()
     }
 

@@ -128,9 +128,10 @@ internal fun LANShieldSearchBar(
 
 
 
-    SearchBar(modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 12.dp), expanded = false, onExpandedChange = {}, inputField = {
+    SearchBar(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp), expanded = false, onExpandedChange = {}, inputField = {
         SearchBarDefaults.InputField(
             modifier = Modifier
                 .focusRequester(focusRequester)

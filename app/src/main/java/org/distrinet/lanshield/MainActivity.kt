@@ -1,8 +1,5 @@
 package org.distrinet.lanshield
 
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.VpnService
@@ -15,7 +12,6 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.remember
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -23,10 +19,8 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
-import androidx.work.ExistingWorkPolicy
 import androidx.work.ListenableWorker
 import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequest
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequest
@@ -34,13 +28,10 @@ import androidx.work.WorkManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import org.distrinet.lanshield.backendsync.OpenPortsWorker
 import org.distrinet.lanshield.backendsync.SendToServerWorkerr
 import org.distrinet.lanshield.ui.LANShieldApp
 import org.distrinet.lanshield.ui.rememberLANShieldAppState
@@ -143,9 +134,11 @@ class MainActivity : ComponentActivity() {
         WorkManager.getInstance(this).enqueue(request)
     }
 
-    private fun scheduleWorker(workerClass: Class<out ListenableWorker?>,
-                               repeatInterval: Long,
-                               repeatIntervalTimeUnit: TimeUnit, uniqueWorkName: String) {
+    private fun scheduleWorker(
+        workerClass: Class<out ListenableWorker?>,
+        repeatInterval: Long,
+        repeatIntervalTimeUnit: TimeUnit, uniqueWorkName: String
+    ) {
         val constraints: Constraints =
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
@@ -163,7 +156,6 @@ class MainActivity : ComponentActivity() {
             periodicWorkRequest
         )
     }
-
 
 
     private suspend fun setDataStoreDefaults() {

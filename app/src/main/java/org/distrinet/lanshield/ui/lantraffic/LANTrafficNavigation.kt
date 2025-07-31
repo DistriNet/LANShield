@@ -1,8 +1,5 @@
 package org.distrinet.lanshield.ui.lantraffic
 
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraphBuilder
@@ -23,7 +20,7 @@ fun NavController.navigateToLANTrafficPerApp(packageName: String, navOptions: Na
     this.navigate("lan_traffic_per_app_route/$packageName", navOptions)
 }
 
-fun getLanTrafficPerAppRoute(packageName: String) : String {
+fun getLanTrafficPerAppRoute(packageName: String): String {
     return "$LAN_TRAFFIC_PER_APP_ROUTE_PREFIX/$packageName"
 }
 
@@ -44,7 +41,9 @@ fun NavGraphBuilder.lanTrafficPerAppScreen(navigateBack: () -> Unit) {
     composable(
         route = LAN_TRAFFIC_PER_APP_ROUTE,
         arguments = listOf(navArgument("packageName") { type = NavType.StringType }),
-        deepLinks = listOf(navDeepLink { uriPattern = "org.distrinet.lanshield://${LAN_TRAFFIC_PER_APP_ROUTE}" }),
+        deepLinks = listOf(navDeepLink {
+            uriPattern = "org.distrinet.lanshield://${LAN_TRAFFIC_PER_APP_ROUTE}"
+        }),
 
         ) { backStackEntry ->
         val packageName = backStackEntry.arguments?.getString("packageName")!!

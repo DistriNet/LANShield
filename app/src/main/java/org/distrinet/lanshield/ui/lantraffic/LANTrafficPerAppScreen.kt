@@ -28,9 +28,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -66,10 +63,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
 import org.distrinet.lanshield.PackageMetadata
-import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.RESERVED_PACKAGE_NAMES
+import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.ui.LANShieldIcons
 import org.distrinet.lanshield.ui.components.LanShieldInfoDialog
@@ -89,7 +86,8 @@ internal fun LANTrafficPerAppRoute(
     val lanFlows: List<LANFlow> by viewModel.getLANFlows(packageName)
         .collectAsState(initial = listOf())
     val context = LocalContext.current
-    val packageMetadata = remember(packageName, context) { getPackageMetadata(packageName, context.packageManager) }
+    val packageMetadata =
+        remember(packageName, context) { getPackageMetadata(packageName, context.packageManager) }
     val accessPolicy by viewModel.getAccessPolicy(packageName).observeAsState(Policy.DEFAULT)
     val defaultPolicy by viewModel.defaultPolicy.collectAsStateWithLifecycle(initialValue = Policy.ALLOW)
     val scope = rememberCoroutineScope()
@@ -104,7 +102,15 @@ internal fun LANTrafficPerAppRoute(
             navigateBack()
         },
         navigateBack = navigateBack,
-        onChangeLanAccessPolicy = { scope.launch { viewModel.onChangeAccessPolicy(packageName, it, packageMetadata.isSystem)} },
+        onChangeLanAccessPolicy = {
+            scope.launch {
+                viewModel.onChangeAccessPolicy(
+                    packageName,
+                    it,
+                    packageMetadata.isSystem
+                )
+            }
+        },
         accessPolicy = accessPolicy ?: Policy.DEFAULT,
         defaultPolicy = defaultPolicy
     )
@@ -133,7 +139,7 @@ internal fun LANTrafficPerAppScreenPreview() {
         defaultPolicy = Policy.ALLOW,
         accessPolicy = Policy.DEFAULT,
         onChangeLanAccessPolicy = {},
-        )
+    )
 }
 
 
@@ -158,12 +164,17 @@ fun PerAppTopBar(
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(),
         modifier = modifier,
         navigationIcon = {
-            IconButton(onClick = navigateBack, content = { Icon(LANShieldIcons.ArrowBack, stringResource(id = R.string.back)) })
+            IconButton(
+                onClick = navigateBack,
+                content = { Icon(LANShieldIcons.ArrowBack, stringResource(id = R.string.back)) })
         },
         actions = {
-            if(changePolicyAllowed) {
+            if (changePolicyAllowed) {
                 IconButton(onClick = onClickChangeSetPolicyException) {
-                    Icon(LANShieldIcons.Settings, stringResource(id = R.string.change_lan_access_policy))
+                    Icon(
+                        LANShieldIcons.Settings,
+                        stringResource(id = R.string.change_lan_access_policy)
+                    )
                 }
             }
             IconButton(onClick = {
@@ -232,26 +243,33 @@ internal fun CardLANFlow(modifier: Modifier = Modifier, lanFlow: LANFlow) {
                 // Policy.DEFAULT is a bug!
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(text = stringResource(
-                    R.string.start_with_timestamp,
-                    formatTimestamp(lanFlow.timeEnd)
-                ))
-                Text(text = stringResource(
-                    R.string.end_with_timestamp,
-                    formatTimestamp(lanFlow.timeStart)
-                ))
+                Text(
+                    text = stringResource(
+                        R.string.start_with_timestamp,
+                        formatTimestamp(lanFlow.timeEnd)
+                    )
+                )
+                Text(
+                    text = stringResource(
+                        R.string.end_with_timestamp,
+                        formatTimestamp(lanFlow.timeStart)
+                    )
+                )
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(text = stringResource(R.string.in_with_amount_bytes, bytesIncoming))
                 Text(text = stringResource(R.string.out_with_amount_bytes, bytesOutgoing))
             }
-            val protocol = lanFlow.dpiProtocol ?: "Unknown" // nDPI will report 'Unknown' if no protocol is detected, don't change this
+            val protocol = lanFlow.dpiProtocol
+                ?: "Unknown" // nDPI will report 'Unknown' if no protocol is detected, don't change this
             if (!protocol.contentEquals("Unknown")) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(text = stringResource(
-                        R.string.detected_protocol,
-                        lanFlow.dpiProtocol ?: "",
-                    ))
+                    Text(
+                        text = stringResource(
+                            R.string.detected_protocol,
+                            lanFlow.dpiProtocol ?: "",
+                        )
+                    )
                 }
             }
         }
@@ -331,7 +349,7 @@ internal fun RadioButtonWithText(
             modifier = Modifier
                 .padding(start = 16.dp)
                 .align(Alignment.CenterVertically),
-            fontWeight = if(isSelected) FontWeight.Bold else FontWeight.Normal
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
         )
     }
 }
@@ -348,9 +366,10 @@ internal fun ChangePolicyBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState()
 
-    val defaultPolicyString = if (defaultPolicy == Policy.ALLOW) stringResource(id = R.string.allow) else stringResource(
-        id = R.string.block
-    )
+    val defaultPolicyString =
+        if (defaultPolicy == Policy.ALLOW) stringResource(id = R.string.allow) else stringResource(
+            id = R.string.block
+        )
     val titleText = buildAnnotatedString {
         append(stringResource(R.string.configure_lan_access_for))
         withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
@@ -358,22 +377,27 @@ internal fun ChangePolicyBottomSheet(
         }
     }
     ModalBottomSheet(modifier = modifier, onDismissRequest = onDismiss, sheetState = sheetState) {
-        Text(text = titleText,
+        Text(
+            text = titleText,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)
-                .padding(horizontal = 4.dp, vertical = 8.dp))
+                .padding(horizontal = 4.dp, vertical = 8.dp)
+        )
         HorizontalDivider(modifier = Modifier.padding(horizontal = 48.dp, vertical = 12.dp))
 
         Column(Modifier.selectableGroup()) {
-            RadioButtonWithText(isSelected = accessPolicy == Policy.DEFAULT,
+            RadioButtonWithText(
+                isSelected = accessPolicy == Policy.DEFAULT,
                 onClick = { onChangeLanAccessPolicy(Policy.DEFAULT) },
                 text = "${stringResource(R.string.default_x)} ($defaultPolicyString)"
             )
-            RadioButtonWithText(isSelected = accessPolicy == Policy.BLOCK,
+            RadioButtonWithText(
+                isSelected = accessPolicy == Policy.BLOCK,
                 onClick = { onChangeLanAccessPolicy(Policy.BLOCK) },
                 text = stringResource(R.string.block)
             )
-            RadioButtonWithText(isSelected = accessPolicy == Policy.ALLOW,
+            RadioButtonWithText(
+                isSelected = accessPolicy == Policy.ALLOW,
                 onClick = { onChangeLanAccessPolicy(Policy.ALLOW) },
                 text = stringResource(R.string.allow)
             )
@@ -402,9 +426,11 @@ internal fun LANTrafficPerAppScreen(
     var showHelpDialog by remember { mutableStateOf(false) }
 
     var policyFilter by remember { mutableStateOf(Policy.DEFAULT) }
-    val lanFlowsFiltered = if (policyFilter == Policy.DEFAULT) lanFlows else lanFlows.filter { it.appliedPolicy == policyFilter }.toList()
+    val lanFlowsFiltered =
+        if (policyFilter == Policy.DEFAULT) lanFlows else lanFlows.filter { it.appliedPolicy == policyFilter }
+            .toList()
 
-    val appliedPolicy = if(accessPolicy != Policy.DEFAULT) accessPolicy else defaultPolicy
+    val appliedPolicy = if (accessPolicy != Policy.DEFAULT) accessPolicy else defaultPolicy
 
     Scaffold(
         modifier = modifier,
@@ -429,7 +455,7 @@ internal fun LANTrafficPerAppScreen(
                 .fillMaxHeight()
         ) {
 
-            if(showHelpDialog) {
+            if (showHelpDialog) {
                 LanShieldInfoDialog(
                     onDismiss = { showHelpDialog = false },
                     title = { Text(text = stringResource(id = R.string.individual_lan_traffic)) },
@@ -438,58 +464,60 @@ internal fun LANTrafficPerAppScreen(
 
             }
 
-        if (showClearAllDialog) {
-            ClearAllDialog(onDismiss = { setShowClearAllDialog(false) }, onConfirm = {
-                setShowClearAllDialog(false)
-                clearAll()
-            }, packageLabel = packageMetadata.packageLabel)
-        }
-        if (showChangePolicyBottomSheet) {
-            ChangePolicyBottomSheet(
-                onDismiss = { showChangePolicyBottomSheet = false },
-                onChangeLanAccessPolicy = onChangeLanAccessPolicy,
-                accessPolicy = accessPolicy,
-                defaultPolicy = defaultPolicy,
-                packageLabel = packageMetadata.packageLabel
-            )
-        }
-
-        Box(  modifier = Modifier
-            .fillMaxSize()
-            .semantics { isTraversalGroup = true }
-        ) {
-            PolicyFilterSegmentedButtonRow(modifier = Modifier
-                .padding(bottom = 4.dp)
-                .align(
-                    Alignment.TopCenter
+            if (showClearAllDialog) {
+                ClearAllDialog(onDismiss = { setShowClearAllDialog(false) }, onConfirm = {
+                    setShowClearAllDialog(false)
+                    clearAll()
+                }, packageLabel = packageMetadata.packageLabel)
+            }
+            if (showChangePolicyBottomSheet) {
+                ChangePolicyBottomSheet(
+                    onDismiss = { showChangePolicyBottomSheet = false },
+                    onChangeLanAccessPolicy = onChangeLanAccessPolicy,
+                    accessPolicy = accessPolicy,
+                    defaultPolicy = defaultPolicy,
+                    packageLabel = packageMetadata.packageLabel
                 )
-                .zIndex(1f)
-                .semantics { traversalIndex = 0f },
-                selectedPolicy = policyFilter,
-                onSelectedPolicyChanged = { policyFilter = it}
-            )
-            LazyColumn(
+            }
+
+            Box(
                 modifier = Modifier
-                    .nestedScroll(scrollBehavior.nestedScrollConnection)
-                    .zIndex(0f)
                     .fillMaxSize()
-                    .semantics { traversalIndex = 1f },
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-                contentPadding = PaddingValues(top = 48.dp, bottom = 16.dp),
+                    .semantics { isTraversalGroup = true }
             ) {
+                PolicyFilterSegmentedButtonRow(
+                    modifier = Modifier
+                        .padding(bottom = 4.dp)
+                        .align(
+                            Alignment.TopCenter
+                        )
+                        .zIndex(1f)
+                        .semantics { traversalIndex = 0f },
+                    selectedPolicy = policyFilter,
+                    onSelectedPolicyChanged = { policyFilter = it }
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .nestedScroll(scrollBehavior.nestedScrollConnection)
+                        .zIndex(0f)
+                        .fillMaxSize()
+                        .semantics { traversalIndex = 1f },
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    contentPadding = PaddingValues(top = 48.dp, bottom = 16.dp),
+                ) {
 
-                items(lanFlowsFiltered, key = { "${it.uuid}${it.timeEnd}" }) {
-                    CardLANFlow(
-                        modifier = Modifier
-                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                            .fillMaxWidth()
-                            .animateItem(), lanFlow = it
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    items(lanFlowsFiltered, key = { "${it.uuid}${it.timeEnd}" }) {
+                        CardLANFlow(
+                            modifier = Modifier
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .fillMaxWidth()
+                                .animateItem(), lanFlow = it
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                    }
+
                 }
-
             }
         }
-    }
     }
 }

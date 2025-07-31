@@ -93,8 +93,7 @@ class IPHeader(packetBuffer: ByteBuffer) {
             val tcpHeaderLength = dataOffsetAndNs.and(0xF0).shr(4) * 4
 
             canDoDpi = ipHeaderLength + tcpHeaderLength < size
-        }
-        else {
+        } else {
             canDoDpi = true
         }
 

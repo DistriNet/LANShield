@@ -1,11 +1,8 @@
 package org.distrinet.lanshield.ui.settings
 
 import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager.NameNotFoundException
-import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.Crossfade
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -33,7 +29,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
@@ -44,14 +39,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
@@ -65,15 +57,13 @@ import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
-import org.distrinet.lanshield.R
-import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.Policy
+import org.distrinet.lanshield.R
 import org.distrinet.lanshield.applicationInfoIsSystem
+import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.getPackageMetadata
 import org.distrinet.lanshield.ui.LANShieldIcons
 import org.distrinet.lanshield.ui.components.LanShieldInfoDialog
@@ -98,18 +88,30 @@ internal fun LANAccessPoliciesRoute(
     val context = LocalContext.current
     val packageManager = context.packageManager
 
-    var installedAppsWithDefaultPolicy: SortedMap<String, LanAccessPolicy> by remember(showSystem) { mutableStateOf(TreeMap()) }
-    val nonDefaultLanAccessPolicies: SortedMap<String, LanAccessPolicy> by viewModel.getLanAccessPolicies(true, context).observeAsState(initial = TreeMap())
+    var installedAppsWithDefaultPolicy: SortedMap<String, LanAccessPolicy> by remember(showSystem) {
+        mutableStateOf(
+            TreeMap()
+        )
+    }
+    val nonDefaultLanAccessPolicies: SortedMap<String, LanAccessPolicy> by viewModel.getLanAccessPolicies(
+        true,
+        context
+    ).observeAsState(initial = TreeMap())
 
-    val lanAccessPolicies = lookupAndFilterLanAccessPolicies(allInstalledAppsWithDefaultPolicy = installedAppsWithDefaultPolicy,
-        nonDefaultLanAccessPolicies = nonDefaultLanAccessPolicies, policyFilter = policyFilter, searchQuery = searchQuery)
+    val lanAccessPolicies = lookupAndFilterLanAccessPolicies(
+        allInstalledAppsWithDefaultPolicy = installedAppsWithDefaultPolicy,
+        nonDefaultLanAccessPolicies = nonDefaultLanAccessPolicies,
+        policyFilter = policyFilter,
+        searchQuery = searchQuery
+    )
     LaunchedEffect(showSystem) {
         withContext(Dispatchers.IO) {
             installedAppsWithDefaultPolicy = packageManager.getInstalledApplications(0).filter {
                 (!context.packageName!!.contentEquals(it.packageName)) and (showSystem or !applicationInfoIsSystem(
                     it
                 ))
-            }.associateBy({ getPackageMetadata(it.packageName, packageManager).packageLabel },
+            }.associateBy(
+                { getPackageMetadata(it.packageName, packageManager).packageLabel },
                 { packageInfoToLanAccessPolicy(it) }).toSortedMap()
         }
     }
@@ -124,26 +126,35 @@ internal fun LANAccessPoliciesRoute(
         navigateBack = navigateBack,
         updateLanAccessPolicy = { viewModel.updateLanAccessPolicy(it) },
         searchQuery = searchQuery,
-        setSearchQuery = { searchQuery = it}
+        setSearchQuery = { searchQuery = it }
     )
 }
 
-fun lookupAndFilterLanAccessPolicies(allInstalledAppsWithDefaultPolicy: SortedMap<String, LanAccessPolicy>,
-                                     nonDefaultLanAccessPolicies: SortedMap<String, LanAccessPolicy>,
-                                     policyFilter: Policy,
-                                     searchQuery: String) : SortedMap<String, LanAccessPolicy> {
+fun lookupAndFilterLanAccessPolicies(
+    allInstalledAppsWithDefaultPolicy: SortedMap<String, LanAccessPolicy>,
+    nonDefaultLanAccessPolicies: SortedMap<String, LanAccessPolicy>,
+    policyFilter: Policy,
+    searchQuery: String
+): SortedMap<String, LanAccessPolicy> {
     var lanAccessPolicies: SortedMap<String, LanAccessPolicy>? = null
 
     if (policyFilter == Policy.DEFAULT) {
         lanAccessPolicies = allInstalledAppsWithDefaultPolicy.toSortedMap()
         lanAccessPolicies.putAll(nonDefaultLanAccessPolicies)
     } else {
-        lanAccessPolicies = nonDefaultLanAccessPolicies.filter { it.value.accessPolicy == policyFilter }.toSortedMap()
+        lanAccessPolicies =
+            nonDefaultLanAccessPolicies.filter { it.value.accessPolicy == policyFilter }
+                .toSortedMap()
     }
-    if(searchQuery.isBlank()) {
+    if (searchQuery.isBlank()) {
         return lanAccessPolicies
     }
-    return lanAccessPolicies.filter { it.key.contains(searchQuery, ignoreCase = true) or it.value.packageName.contains(searchQuery, ignoreCase = true) }.toSortedMap()
+    return lanAccessPolicies.filter {
+        it.key.contains(
+            searchQuery,
+            ignoreCase = true
+        ) or it.value.packageName.contains(searchQuery, ignoreCase = true)
+    }.toSortedMap()
 }
 
 
@@ -184,9 +195,10 @@ internal fun LanAccessPoliciesSearchBar(
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    SearchBar(modifier = Modifier
-        .fillMaxWidth()
-        .padding(horizontal = 12.dp), expanded = false, onExpandedChange = {}, inputField = {
+    SearchBar(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp), expanded = false, onExpandedChange = {}, inputField = {
         SearchBarDefaults.InputField(
             modifier = Modifier
                 .focusRequester(focusRequester)
@@ -200,7 +212,7 @@ internal fun LanAccessPoliciesSearchBar(
                 },
             query = searchQuery,
             onQueryChange = { setSearchQuery(it) },
-            onSearch = {  keyboardController?.hide() },
+            onSearch = { keyboardController?.hide() },
             expanded = false,
             onExpandedChange = {},
             leadingIcon = {
@@ -209,8 +221,8 @@ internal fun LanAccessPoliciesSearchBar(
                 }
             },
             trailingIcon = {
-                if(searchQuery.isNotEmpty()) {
-                    IconButton(onClick = {setSearchQuery("")}) {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { setSearchQuery("") }) {
                         Icon(
                             imageVector = LANShieldIcons.Close,
                             contentDescription = stringResource(R.string.cancel_search)
@@ -228,10 +240,11 @@ internal fun LanAccessPoliciesSearchBar(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun LanAccessPoliciesTopBar(    scrollBehavior: TopAppBarScrollBehavior,     navigateBack: () -> Unit,
-setShowSearchBar: (Boolean) -> Unit,     setShowSystemApps: (Boolean) -> Unit,
-                                         onShowInfoClicked: () -> Unit,     showSystemApps: Boolean,
-                                         ) {
+internal fun LanAccessPoliciesTopBar(
+    scrollBehavior: TopAppBarScrollBehavior, navigateBack: () -> Unit,
+    setShowSearchBar: (Boolean) -> Unit, setShowSystemApps: (Boolean) -> Unit,
+    onShowInfoClicked: () -> Unit, showSystemApps: Boolean,
+) {
 
     var showDropDown by remember { mutableStateOf(false) }
 
@@ -240,15 +253,21 @@ setShowSearchBar: (Boolean) -> Unit,     setShowSystemApps: (Boolean) -> Unit,
         title = { Text(text = stringResource(id = R.string.per_app_exceptions)) },
         colors = TopAppBarDefaults.topAppBarColors(),
         navigationIcon = {
-            IconButton(onClick = navigateBack, content = { Icon(LANShieldIcons.ArrowBack,
-                stringResource(
-                    R.string.back
+            IconButton(onClick = navigateBack, content = {
+                Icon(
+                    LANShieldIcons.ArrowBack,
+                    stringResource(
+                        R.string.back
+                    )
                 )
-            ) })
+            })
         },
         actions = {
-            IconButton(onClick = { setShowSearchBar(true) } ) {
-                Icon(imageVector = LANShieldIcons.Search, contentDescription = stringResource(id = R.string.search))
+            IconButton(onClick = { setShowSearchBar(true) }) {
+                Icon(
+                    imageVector = LANShieldIcons.Search,
+                    contentDescription = stringResource(id = R.string.search)
+                )
             }
             IconButton(onClick = {
                 showDropDown = true
@@ -347,9 +366,11 @@ internal fun LanAccessPolicyCard(
     updateLanAccessPolicy: (LanAccessPolicy) -> Unit
 ) {
     Row(modifier = modifier) {
-        PackageIcon( modifier = Modifier
-            .align(Alignment.CenterVertically)
-            .size(64.dp), packageName = lanAccessPolicy.packageName)
+        PackageIcon(
+            modifier = Modifier
+                .align(Alignment.CenterVertically)
+                .size(64.dp), packageName = lanAccessPolicy.packageName
+        )
         Column(
             Modifier
                 .padding(start = 16.dp)
@@ -363,7 +384,14 @@ internal fun LanAccessPolicyCard(
             ) {
                 SegmentedButton(
                     selected = lanAccessPolicy.accessPolicy == Policy.DEFAULT,
-                    onClick = { updateLanAccessPolicy(lanAccessPolicy.copy(accessPolicy = Policy.DEFAULT, shouldSync = true)) },
+                    onClick = {
+                        updateLanAccessPolicy(
+                            lanAccessPolicy.copy(
+                                accessPolicy = Policy.DEFAULT,
+                                shouldSync = true
+                            )
+                        )
+                    },
                     shape = SegmentedButtonDefaults.itemShape(
                         index = 0,
                         count = 3
@@ -373,7 +401,14 @@ internal fun LanAccessPolicyCard(
                 }
                 SegmentedButton(
                     selected = lanAccessPolicy.accessPolicy == Policy.BLOCK,
-                    onClick = { updateLanAccessPolicy(lanAccessPolicy.copy(accessPolicy = Policy.BLOCK, shouldSync = true)) },
+                    onClick = {
+                        updateLanAccessPolicy(
+                            lanAccessPolicy.copy(
+                                accessPolicy = Policy.BLOCK,
+                                shouldSync = true
+                            )
+                        )
+                    },
                     shape = SegmentedButtonDefaults.itemShape(
                         index = 1,
                         count = 3
@@ -383,7 +418,14 @@ internal fun LanAccessPolicyCard(
                 }
                 SegmentedButton(
                     selected = lanAccessPolicy.accessPolicy == Policy.ALLOW,
-                    onClick = { updateLanAccessPolicy(lanAccessPolicy.copy(accessPolicy = Policy.ALLOW, shouldSync = true)) },
+                    onClick = {
+                        updateLanAccessPolicy(
+                            lanAccessPolicy.copy(
+                                accessPolicy = Policy.ALLOW,
+                                shouldSync = true
+                            )
+                        )
+                    },
                     shape = SegmentedButtonDefaults.itemShape(
                         index = 2,
                         count = 3
@@ -437,7 +479,8 @@ fun LANAccessPoliciesScreen(
                 setShowSystemApps = setShowSystemApps,
                 onShowInfoClicked = { showInfoDialog = true },
                 searchQuery = searchQuery,
-                setSearchQuery = setSearchQuery)
+                setSearchQuery = setSearchQuery
+            )
         }) { innerPadding ->
         Column(
             modifier = Modifier
@@ -448,13 +491,14 @@ fun LANAccessPoliciesScreen(
         ) {
             if (showInfoDialog) {
                 LanShieldInfoDialog(
-                    onDismiss = { showInfoDialog = false } ,
+                    onDismiss = { showInfoDialog = false },
                     title = { Text(text = stringResource(id = R.string.per_app_exceptions)) },
                     text = {
                         Text(
                             text = stringResource(R.string.per_app_policies_info).trimIndent()
                         )
-                    })            }
+                    })
+            }
 
             Box(
                 modifier = Modifier

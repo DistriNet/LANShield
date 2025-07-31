@@ -16,7 +16,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -46,10 +45,10 @@ import org.distrinet.lanshield.R
 import org.distrinet.lanshield.database.model.FlowAverage
 import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.getPackageMetadata
-import org.distrinet.lanshield.ui.components.LanShieldInfoDialog
-import org.distrinet.lanshield.ui.components.PackageIcon
 import org.distrinet.lanshield.ui.components.ExportFile
 import org.distrinet.lanshield.ui.components.LANShieldCombinedTopBar
+import org.distrinet.lanshield.ui.components.LanShieldInfoDialog
+import org.distrinet.lanshield.ui.components.PackageIcon
 import org.distrinet.lanshield.ui.theme.LANShieldTypography
 import org.distrinet.lanshield.ui.theme.LocalTintTheme
 import java.text.DateFormat
@@ -238,13 +237,23 @@ internal fun processFlowAverages(
         List<ProcessedFlowAverage> {
     val packageManager = context.packageManager
     if (searchQuery.isNotEmpty()) {
-        return flowAverages.map { ProcessedFlowAverage(getPackageMetadata(it.appId, packageManager), it) }
+        return flowAverages.map {
+            ProcessedFlowAverage(
+                getPackageMetadata(it.appId, packageManager),
+                it
+            )
+        }
             .filter {
                 it.packageMetadata.packageLabel.contains(searchQuery, ignoreCase = true) or
                         it.packageMetadata.packageName.contains(searchQuery, ignoreCase = true)
             }.toList()
     }
-    return flowAverages.map { ProcessedFlowAverage(getPackageMetadata(it.appId, packageManager), it) }
+    return flowAverages.map {
+        ProcessedFlowAverage(
+            getPackageMetadata(it.appId, packageManager),
+            it
+        )
+    }
         .toList()
 }
 

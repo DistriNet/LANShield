@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -15,26 +14,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,7 +42,6 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -58,14 +52,18 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
-import org.distrinet.lanshield.STUDY_MORE_INFO_URL
 import org.distrinet.lanshield.isAppUsageAccessGranted
 import org.distrinet.lanshield.ui.LANShieldIcons
 import org.distrinet.lanshield.ui.components.GrantAppUsagePermissionDialog
+import org.distrinet.lanshield.ui.intro.IntroSlides.DEFAULT_POLICY
+import org.distrinet.lanshield.ui.intro.IntroSlides.INTRO_FINISHED
+import org.distrinet.lanshield.ui.intro.IntroSlides.INTRO_START
+import org.distrinet.lanshield.ui.intro.IntroSlides.JOIN_USER_STUDY
+import org.distrinet.lanshield.ui.intro.IntroSlides.NOTIFICATIONS
+import org.distrinet.lanshield.ui.intro.IntroSlides.SHARE_APP_USAGE
 import org.distrinet.lanshield.ui.settings.SettingsSwitchComp
 import org.distrinet.lanshield.ui.theme.LANShieldTheme
 import org.distrinet.lanshield.ui.theme.LocalTintTheme
-import org.distrinet.lanshield.ui.intro.IntroSlides.*
 
 
 enum class IntroSlides {
@@ -81,21 +79,26 @@ enum class IntroSlides {
 internal fun IntroRoute(viewModel: IntroViewModel, navigateToOverview: () -> Unit) {
 
     val defaultPolicy by viewModel.defaultPolicy.collectAsStateWithLifecycle(initialValue = Policy.BLOCK)
-    val isShareLanMetricsEnabled by viewModel.shareLanMetricsEnabled.collectAsStateWithLifecycle(initialValue = false)
-    val isShareAppUsageEnabled by viewModel.shareAppUsageEnabled.collectAsStateWithLifecycle(initialValue = false)
+    val isShareLanMetricsEnabled by viewModel.shareLanMetricsEnabled.collectAsStateWithLifecycle(
+        initialValue = false
+    )
+    val isShareAppUsageEnabled by viewModel.shareAppUsageEnabled.collectAsStateWithLifecycle(
+        initialValue = false
+    )
 
 
-    Scaffold(topBar = { Spacer(modifier = Modifier.size(50.dp))}) { innerPadding ->
-        IntroScreen(modifier = Modifier.padding(innerPadding), defaultPolicy = defaultPolicy,
+    Scaffold(topBar = { Spacer(modifier = Modifier.size(50.dp)) }) { innerPadding ->
+        IntroScreen(
+            modifier = Modifier.padding(innerPadding), defaultPolicy = defaultPolicy,
             onChangeDefaultPolicy = { viewModel.onChangeDefaultPolicy(it) },
             isShareLanMetricsEnabled = isShareLanMetricsEnabled,
-            onChangeShareLanMetrics = { viewModel.onChangeShareLanMetrics(it)},
+            onChangeShareLanMetrics = { viewModel.onChangeShareLanMetrics(it) },
             isShareAppUsageEnabled = isShareAppUsageEnabled,
-            onChangeShareAppUsage = { viewModel.onChangeShareAppUsage(it)},
+            onChangeShareAppUsage = { viewModel.onChangeShareAppUsage(it) },
             navigateToOverview = navigateToOverview,
             onChangeFinishAppIntro = { viewModel.onChangeAppIntro(it) },
             createNotificationChannels = { viewModel.createNotificationChannels() }
-            )
+        )
     }
 
 }
@@ -124,7 +127,8 @@ internal fun IntroScreen(
     onChangeFinishAppIntro: (Boolean) -> Unit = {},
     createNotificationChannels: () -> Unit = {}
 ) {
-    val pageCount = IntroSlides.entries.size //if(isShareLanMetricsEnabled) IntroSlides.entries.size else IntroSlides.entries.size - 1
+    val pageCount =
+        IntroSlides.entries.size //if(isShareLanMetricsEnabled) IntroSlides.entries.size else IntroSlides.entries.size - 1
     val pagerState = rememberPagerState(pageCount = {
         pageCount
     }, initialPage = initialPage)
@@ -141,10 +145,10 @@ internal fun IntroScreen(
         createNotificationChannels()
         scrollToNextPage(pagerState, coroutineScope)
     }
-    
+
     val scrollEnabled =
         (pagerState.currentPage != NOTIFICATIONS.ordinal || notificationPermissionDialogLaunched) &&
-        pagerState.currentPage != JOIN_USER_STUDY.ordinal &&
+                pagerState.currentPage != JOIN_USER_STUDY.ordinal &&
                 (pagerState.currentPage != INTRO_FINISHED.ordinal || isShareLanMetricsEnabled)
 
     BackHandler(enabled = pagerState.currentPage != 0) {
@@ -155,29 +159,44 @@ internal fun IntroScreen(
     if (showGrantAppUsageDialog) {
         GrantAppUsagePermissionDialog(
             onDismiss = { showGrantAppUsageDialog = false },
-            onConfirm = { showGrantAppUsageDialog = false
-                startUsageAccessSettingsActivity(context) }
+            onConfirm = {
+                showGrantAppUsageDialog = false
+                startUsageAccessSettingsActivity(context)
+            }
         )
     }
 
     Column(modifier = modifier) {
-        HorizontalPager(state = pagerState, userScrollEnabled = scrollEnabled, modifier = Modifier
-            .weight(1F)
-            .fillMaxHeight()) { page ->
+        HorizontalPager(
+            state = pagerState, userScrollEnabled = scrollEnabled, modifier = Modifier
+                .weight(1F)
+                .fillMaxHeight()
+        ) { page ->
             when (page) {
                 INTRO_START.ordinal -> IntroSlide()
-                DEFAULT_POLICY.ordinal -> DefaultPolicySlide(defaultPolicy = defaultPolicy, onChangeDefaultPolicy = onChangeDefaultPolicy)
+                DEFAULT_POLICY.ordinal -> DefaultPolicySlide(
+                    defaultPolicy = defaultPolicy,
+                    onChangeDefaultPolicy = onChangeDefaultPolicy
+                )
+
                 NOTIFICATIONS.ordinal -> NotificationSlide(doRequestNotificationPermission = {
                     requestNotificationPermissionLauncher.launch("android.permission.POST_NOTIFICATIONS")
                 }
                 )
-                JOIN_USER_STUDY.ordinal -> ShareLanMetricsSlide(onChangeShareLanMetrics = onChangeShareLanMetrics, isShareLanMetricsEnabled = isShareLanMetricsEnabled)
-                SHARE_APP_USAGE.ordinal -> ShareAppUsageSlide(isShareAppUsageEnabled
+
+                JOIN_USER_STUDY.ordinal -> ShareLanMetricsSlide(
+                    onChangeShareLanMetrics = onChangeShareLanMetrics,
+                    isShareLanMetricsEnabled = isShareLanMetricsEnabled
+                )
+
+                SHARE_APP_USAGE.ordinal -> ShareAppUsageSlide(
+                    isShareAppUsageEnabled
                 ) { isEnabled ->
                     onChangeShareAppUsageWithPermission(
                         isEnabled,
                         onChangeShareAppUsage, { showGrantAppUsageDialog = true },
-                        context)
+                        context
+                    )
                 }
 
                 INTRO_FINISHED.ordinal -> IntroFinishedSlide()
@@ -188,13 +207,15 @@ internal fun IntroScreen(
                 .fillMaxWidth()
                 .padding(bottom = 4.dp)
         ) {
-            IntroLeftButton(modifier = Modifier
-                .padding(8.dp)
-                .align(Alignment.CenterStart),
+            IntroLeftButton(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .align(Alignment.CenterStart),
                 coroutineScope = coroutineScope,
                 pagerState = pagerState,
                 onChangeShareLanMetrics = onChangeShareLanMetrics,
-                isShareLanMetricsEnabled = isShareLanMetricsEnabled)
+                isShareLanMetricsEnabled = isShareLanMetricsEnabled
+            )
             Row(
                 Modifier
                     .align(Alignment.Center)
@@ -203,40 +224,45 @@ internal fun IntroScreen(
                 repeat(pageCount) { iteration ->
                     val color =
                         if (pagerState.currentPage == iteration) Color.DarkGray else Color.LightGray
-                        Box(
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .background(color, CircleShape)
-                                .size(10.dp)
-                        )
+                    Box(
+                        modifier = Modifier
+                            .padding(8.dp)
+                            .background(color, CircleShape)
+                            .size(10.dp)
+                    )
                 }
             }
-            IntroRightButton(modifier = Modifier
-                .padding(8.dp)
-                .align(Alignment.CenterEnd),
+            IntroRightButton(
+                modifier = Modifier
+                    .padding(8.dp)
+                    .align(Alignment.CenterEnd),
                 coroutineScope = coroutineScope,
                 pagerState = pagerState,
                 onChangeShareLanMetrics = onChangeShareLanMetrics,
                 isShareLanMetricsEnabled = isShareLanMetricsEnabled,
                 navigateToOverview = navigateToOverview,
                 onChangeFinishAppIntro = onChangeFinishAppIntro,
-                requestNotificationPermissionLauncher = requestNotificationPermissionLauncher)
+                requestNotificationPermissionLauncher = requestNotificationPermissionLauncher
+            )
 
         }
     }
 }
 
 
-fun doShareLanMetricsDecision(shareLanMetrics: Boolean, onChangeShareLanMetrics: (Boolean) -> Unit, coroutineScope: CoroutineScope, pagerState: PagerState) {
+fun doShareLanMetricsDecision(
+    shareLanMetrics: Boolean,
+    onChangeShareLanMetrics: (Boolean) -> Unit,
+    coroutineScope: CoroutineScope,
+    pagerState: PagerState
+) {
     onChangeShareLanMetrics(shareLanMetrics)
-    if(shareLanMetrics) {
+    if (shareLanMetrics) {
         scrollToPage(pagerState, SHARE_APP_USAGE.ordinal, coroutineScope)
-    }
-    else {
+    } else {
         scrollToPage(pagerState, INTRO_FINISHED.ordinal, coroutineScope)
     }
 }
-
 
 
 fun scrollToPage(pagerState: PagerState, targetPage: Int, coroutineScope: CoroutineScope) {
@@ -244,24 +270,30 @@ fun scrollToPage(pagerState: PagerState, targetPage: Int, coroutineScope: Corout
         pagerState.animateScrollToPage(targetPage)
     }
 }
+
 fun scrollToNextPage(pagerState: PagerState, coroutineScope: CoroutineScope) {
-    if(pagerState.currentPage >= IntroSlides.entries.size - 1) return
-    scrollToPage(pagerState, pagerState.currentPage + 1 , coroutineScope)
+    if (pagerState.currentPage >= IntroSlides.entries.size - 1) return
+    scrollToPage(pagerState, pagerState.currentPage + 1, coroutineScope)
 
 }
 
 fun scrollToPreviousPage(pagerState: PagerState, coroutineScope: CoroutineScope) {
-    if(pagerState.currentPage <= 0) return
-    scrollToPage(pagerState, pagerState.currentPage -1 , coroutineScope)
+    if (pagerState.currentPage <= 0) return
+    scrollToPage(pagerState, pagerState.currentPage - 1, coroutineScope)
 
 }
 
 @Composable
 internal fun IntroSlide(modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxWidth()) {
-        Text(text = "LANShield", style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier
-            .align(Alignment.CenterHorizontally)
-            .padding(16.dp))
+        Text(
+            text = "LANShield",
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(16.dp)
+        )
         Image(
             painter = painterResource(id = R.mipmap.logo_foreground),
             contentDescription = stringResource(R.string.lanshield_logo),
@@ -270,7 +302,12 @@ internal fun IntroSlide(modifier: Modifier = Modifier) {
                 .align(Alignment.CenterHorizontally),
             contentScale = ContentScale.Crop
         )
-        Text(text= stringResource(R.string.intro_welcome).trimIndent(), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(16.dp), textAlign = TextAlign.Center)
+        Text(
+            text = stringResource(R.string.intro_welcome).trimIndent(),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(16.dp),
+            textAlign = TextAlign.Center
+        )
     }
 }
 
@@ -287,17 +324,27 @@ internal fun DefaultPolicySlidePreview() {
 @Composable
 internal fun DefaultPolicySlide(defaultPolicy: Policy, onChangeDefaultPolicy: (Policy) -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = stringResource(R.string.set_a_default_policy), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier
-            .align(Alignment.CenterHorizontally)
-            .padding(16.dp))
+        Text(
+            text = stringResource(R.string.set_a_default_policy),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(16.dp)
+        )
         Spacer(modifier = Modifier.size(40.dp))
-        Icon(imageVector = LANShieldIcons.Block, contentDescription = null, modifier = Modifier
-            .align(Alignment.CenterHorizontally)
-            .size(125.dp),
+        Icon(
+            imageVector = LANShieldIcons.Block, contentDescription = null, modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(125.dp),
             tint = getIconTint()
         )
         Spacer(modifier = Modifier.size(40.dp))
-        Text(text= stringResource(R.string.intro_default_policy).trimIndent(), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(24.dp))
+        Text(
+            text = stringResource(R.string.intro_default_policy).trimIndent(),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(24.dp)
+        )
 
         SingleChoiceSegmentedButtonRow(
             modifier = Modifier
@@ -345,15 +392,24 @@ internal fun NotificationSlidePreview() {
 @Composable
 internal fun NotificationSlide(doRequestNotificationPermission: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(text = stringResource(R.string.get_notified), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier
-            .align(Alignment.CenterHorizontally)
-            .padding(16.dp))
+        Text(
+            text = stringResource(R.string.get_notified),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(16.dp)
+        )
         Spacer(modifier = Modifier.size(40.dp))
         Card(modifier = Modifier.align(Alignment.CenterHorizontally)) {
-            Image(painterResource(id = R.drawable.lanshield_notification), contentDescription = null, modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .width(350.dp)
-                .padding(8.dp))
+            Image(
+                painterResource(id = R.drawable.lanshield_notification),
+                contentDescription = null,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .width(350.dp)
+                    .padding(8.dp)
+            )
         }
 //        Icon(imageVector = LANShieldIcons.NotificationsActive, contentDescription = null, modifier = Modifier
 //            .align(Alignment.CenterHorizontally)
@@ -368,7 +424,10 @@ internal fun NotificationSlide(doRequestNotificationPermission: () -> Unit) {
                 .padding(24.dp),
         )
         Spacer(modifier = Modifier.size(40.dp))
-        Button(onClick = doRequestNotificationPermission, modifier = Modifier.align(Alignment.CenterHorizontally)) {
+        Button(
+            onClick = doRequestNotificationPermission,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
             Text(text = "Allow notifications")
         }
     }
@@ -399,7 +458,7 @@ private fun onChangeShareAppUsageWithPermission(
     setShareAppUsage: (Boolean) -> Unit,
     showDialog: () -> Unit,
     context: Context,
-    ) {
+) {
     val accessGranted = isAppUsageAccessGranted(context)
 
     if (isEnabled && !accessGranted) {
@@ -409,21 +468,37 @@ private fun onChangeShareAppUsageWithPermission(
 
 
 @Composable
-internal fun ShareAppUsageSlide(isShareAppUsageEnabled: Boolean, onChangeShareAppUsage: (Boolean) -> Unit) {
+internal fun ShareAppUsageSlide(
+    isShareAppUsageEnabled: Boolean,
+    onChangeShareAppUsage: (Boolean) -> Unit
+) {
     Column() {
-        Text(text = stringResource(R.string.intro_share_app_usage_title), style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center, modifier = Modifier
-            .align(Alignment.CenterHorizontally)
-            .padding(16.dp))
+        Text(
+            text = stringResource(R.string.intro_share_app_usage_title),
+            style = MaterialTheme.typography.titleLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .padding(16.dp)
+        )
         Spacer(modifier = Modifier.size(40.dp))
-        Icon(imageVector = LANShieldIcons.QuestionMark, contentDescription = null, modifier = Modifier
-            .align(Alignment.CenterHorizontally)
-            .size(125.dp),
+        Icon(
+            imageVector = LANShieldIcons.QuestionMark,
+            contentDescription = null,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)
+                .size(125.dp),
             tint = getIconTint()
-            )
+        )
         Spacer(modifier = Modifier.size(40.dp))
-        Text(text= stringResource(R.string.intro_share_app_usage_content).trimIndent(), style = MaterialTheme.typography.bodyLarge, modifier = Modifier
-            .padding(24.dp)
-            .fillMaxWidth(), textAlign = TextAlign.Center)
+        Text(
+            text = stringResource(R.string.intro_share_app_usage_content).trimIndent(),
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier
+                .padding(24.dp)
+                .fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
         SettingsSwitchComp(
             name = R.string.share_anonymous_app_usage,
             isChecked = isShareAppUsageEnabled,
@@ -444,8 +519,8 @@ internal fun IntroFinishedSlidePreview() {
 }
 
 @Composable
-internal fun getIconTint() : Color {
-    return if ( LocalTintTheme.current.iconTint != Color.Unspecified) LocalTintTheme.current.iconTint else Color.Unspecified
+internal fun getIconTint(): Color {
+    return if (LocalTintTheme.current.iconTint != Color.Unspecified) LocalTintTheme.current.iconTint else Color.Unspecified
 }
 
 @Composable
@@ -470,14 +545,20 @@ internal fun IntroFinishedSlide() {
         )
         Spacer(modifier = Modifier.size(40.dp))
         Text(
-            text = stringResource(R.string.enjoy_using_lanshield).trimIndent(), style = MaterialTheme.typography.titleMedium, modifier = Modifier
+            text = stringResource(R.string.enjoy_using_lanshield).trimIndent(),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
                 .padding(16.dp)
-                .fillMaxWidth(), textAlign = TextAlign.Center
+                .fillMaxWidth(),
+            textAlign = TextAlign.Center
         )
         Text(
-            text = stringResource(R.string.intro_finished_feedback).trimIndent(), style = MaterialTheme.typography.bodyMedium, modifier = Modifier
+            text = stringResource(R.string.intro_finished_feedback).trimIndent(),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier
                 .padding(16.dp)
-                .fillMaxWidth(), textAlign = TextAlign.Center
+                .fillMaxWidth(),
+            textAlign = TextAlign.Center
         )
     }
 }

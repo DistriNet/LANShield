@@ -19,8 +19,16 @@ import org.distrinet.lanshield.database.model.LANShieldSession
 import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.database.model.OpenPorts
 
-@Database(entities = [LanAccessPolicy::class, LANFlow::class, LANShieldSession::class, OpenPorts::class], version = 3, exportSchema = true)
-@TypeConverters(SortedIntSetConverter::class, StringListConverter::class, InetSocketAddressConverter::class)
+@Database(
+    entities = [LanAccessPolicy::class, LANFlow::class, LANShieldSession::class, OpenPorts::class],
+    version = 3,
+    exportSchema = true
+)
+@TypeConverters(
+    SortedIntSetConverter::class,
+    StringListConverter::class,
+    InetSocketAddressConverter::class
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun LanAccessPolicyDao(): LanAccessPolicyDao
     abstract fun FlowDao(): FlowDao
@@ -41,8 +49,8 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "lanshield_database"
                 ).addMigrations(MIGRATION_1_2)
-                .addMigrations(MIGRATION_2_3)
-                .build()
+                    .addMigrations(MIGRATION_2_3)
+                    .build()
                 INSTANCE = instance
                 return instance
             }
@@ -65,7 +73,8 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
 
 val MIGRATION_2_3 = object : Migration(2, 3) {
     override fun migrate(db: SupportSQLiteDatabase) {
-        db.execSQL("""
+        db.execSQL(
+            """
             CREATE TABLE IF NOT EXISTS `open_ports` (
                 `uuid` BLOB NOT NULL,
                 `packageName` TEXT NOT NULL,
@@ -77,7 +86,8 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
                 `scheduledForDeletion` INTEGER NOT NULL,
                 PRIMARY KEY(`uuid`)
             )
-        """.trimIndent())
+        """.trimIndent()
+        )
     }
 
 }

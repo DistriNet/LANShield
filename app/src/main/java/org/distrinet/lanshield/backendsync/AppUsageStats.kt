@@ -31,11 +31,14 @@ class AppUsageStats {
         ): JSONObject {
             val json = JSONObject()
             json.put("app_name", usageStat.packageName)
-            json.put("begin_time",usageStat.firstTimeStamp)
-            json.put("end_time",usageStat.lastTimeStamp)
+            json.put("begin_time", usageStat.firstTimeStamp)
+            json.put("end_time", usageStat.lastTimeStamp)
             json.put("time_used", usageStat.totalTimeInForeground)
             json.put("time_visible", usageStat.totalTimeVisible)
-            json.put("is_system", packageNameIsSystem(usageStat.packageName, context.packageManager))
+            json.put(
+                "is_system",
+                packageNameIsSystem(usageStat.packageName, context.packageManager)
+            )
 
 
             return json

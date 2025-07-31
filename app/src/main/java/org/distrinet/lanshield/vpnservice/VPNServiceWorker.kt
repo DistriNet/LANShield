@@ -17,7 +17,7 @@ class VPNServiceWorker(private val appContext: Context, workerParams: WorkerPara
 
     override fun doWork(): Result {
         val context = applicationContext
-        if(hasVPNConsent()) {
+        if (hasVPNConsent()) {
             val serviceIntent = Intent(context, VPNService::class.java)
             context.startForegroundService(serviceIntent)
             return Result.success()

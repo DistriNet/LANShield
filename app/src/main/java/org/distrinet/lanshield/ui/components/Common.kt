@@ -6,9 +6,7 @@ import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.os.Build
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -22,17 +20,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.traversalIndex
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
 import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
@@ -42,7 +35,6 @@ import org.distrinet.lanshield.PACKAGE_NAME_PLAY_SERVICES
 import org.distrinet.lanshield.PACKAGE_NAME_ROOT
 import org.distrinet.lanshield.PACKAGE_NAME_SYSTEM
 import org.distrinet.lanshield.PACKAGE_NAME_UNKNOWN
-import org.distrinet.lanshield.PackageMetadata
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.database.model.LANFlow
@@ -83,9 +75,11 @@ fun LanShieldInfoDialog(
 }
 
 @Composable
-fun PolicyFilterSegmentedButtonRow(modifier: Modifier = Modifier,
-                                   selectedPolicy: Policy,
-                                   onSelectedPolicyChanged: (Policy) -> Unit) {
+fun PolicyFilterSegmentedButtonRow(
+    modifier: Modifier = Modifier,
+    selectedPolicy: Policy,
+    onSelectedPolicyChanged: (Policy) -> Unit
+) {
     SingleChoiceSegmentedButtonRow(modifier = modifier) {
         Policy.entries.forEachIndexed { index, policy ->
             SegmentedButton(
@@ -109,17 +103,19 @@ fun generateFilename(): String {
 }
 
 @Composable
-fun ExportFile(context: Context,
-              allFlows: List<LANFlow>){
+fun ExportFile(
+    context: Context,
+    allFlows: List<LANFlow>
+) {
     val fileToShare = File(context.cacheDir, generateFilename())
     val array = JSONArray()
-    for (flow in allFlows){
+    for (flow in allFlows) {
         array.put(flow.toJSON())
     }
     val json = JSONObject()
     json.put("device_sdk", Build.VERSION.SDK_INT)
     json.put("model", Build.MODEL)
-    json.put("flows",array)
+    json.put("flows", array)
     FileOutputStream(fileToShare).use {
         it.write(json.toString().toByteArray())
     }
@@ -140,7 +136,7 @@ fun ExportFile(context: Context,
 
 @Composable
 fun PolicyFilterName(policy: Policy) {
-    return when(policy) {
+    return when (policy) {
         Policy.DEFAULT -> Text(text = stringResource(R.string.all))
         Policy.BLOCK -> Text(text = stringResource(R.string.blocked))
         Policy.ALLOW -> Text(text = stringResource(R.string.allowed))
@@ -150,14 +146,29 @@ fun PolicyFilterName(policy: Policy) {
 
 @Composable
 private fun UnknownPackageIcon(modifier: Modifier = Modifier, packageName: String) {
-    if ("android.uid.phone" in packageName) return Icon(LANShieldIcons.Android, PACKAGE_NAME_SYSTEM, modifier = modifier)
-    if ("com.google.uid.shared" in packageName) return Icon(LANShieldIcons.Android, PACKAGE_NAME_PLAY_SERVICES, modifier = modifier)
+    if ("android.uid.phone" in packageName) return Icon(
+        LANShieldIcons.Android,
+        PACKAGE_NAME_SYSTEM,
+        modifier = modifier
+    )
+    if ("com.google.uid.shared" in packageName) return Icon(
+        LANShieldIcons.Android,
+        PACKAGE_NAME_PLAY_SERVICES,
+        modifier = modifier
+    )
 
-    when(packageName) {
+    when (packageName) {
         PACKAGE_NAME_ROOT -> Icon(LANShieldIcons.Tag, PACKAGE_NAME_ROOT, modifier = modifier)
-        PACKAGE_NAME_SYSTEM -> Icon(LANShieldIcons.Android, PACKAGE_NAME_SYSTEM, modifier = modifier)
-        else -> Icon(LANShieldIcons.QuestionMark,
-            stringResource(R.string.unknown), modifier = modifier)
+        PACKAGE_NAME_SYSTEM -> Icon(
+            LANShieldIcons.Android,
+            PACKAGE_NAME_SYSTEM,
+            modifier = modifier
+        )
+
+        else -> Icon(
+            LANShieldIcons.QuestionMark,
+            stringResource(R.string.unknown), modifier = modifier
+        )
     }
 }
 
@@ -168,33 +179,30 @@ fun PackageIcon(modifier: Modifier = Modifier, packageName: String) {
     var bitmapLookupFailed by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    if(bitmap != null) {
+    if (bitmap != null) {
         Image(
             bitmap = bitmap!!,
             contentDescription = stringResource(R.string.logo),
             contentScale = ContentScale.Fit,
             modifier = modifier
         )
-    }
-    else {
+    } else {
         UnknownPackageIcon(modifier = modifier, packageName = packageName)
-        if(!bitmapLookupFailed and !packageName.contentEquals(PACKAGE_NAME_UNKNOWN)) {
+        if (!bitmapLookupFailed and !packageName.contentEquals(PACKAGE_NAME_UNKNOWN)) {
             LaunchedEffect(packageName) {
                 coroutineScope.launch {
                     val icon = withContext(Dispatchers.IO) {
                         try {
                             context.packageManager.getApplicationIcon(packageName)
                                 .toBitmap(config = Bitmap.Config.ARGB_8888).asImageBitmap()
-                        }
-                        catch (_: PackageManager.NameNotFoundException) {
+                        } catch (_: PackageManager.NameNotFoundException) {
                             null
                         }
 
                     }
-                    if(icon != null) {
+                    if (icon != null) {
                         bitmap = icon
-                    }
-                    else bitmapLookupFailed = true
+                    } else bitmapLookupFailed = true
 
                 }
             }

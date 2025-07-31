@@ -20,9 +20,10 @@ import org.distrinet.lanshield.vpnservice.LANShieldNotificationManager
 import javax.inject.Inject
 
 @HiltViewModel
-class IntroViewModel  @Inject constructor(
+class IntroViewModel @Inject constructor(
     val dataStore: DataStore<Preferences>,
-    val lanShieldNotificationManager: LANShieldNotificationManager) : ViewModel()  {
+    val lanShieldNotificationManager: LANShieldNotificationManager
+) : ViewModel() {
 
     val shareLanMetricsEnabled =
         dataStore.data.map { it[SHARE_LAN_METRICS_KEY] ?: false }.distinctUntilChanged()

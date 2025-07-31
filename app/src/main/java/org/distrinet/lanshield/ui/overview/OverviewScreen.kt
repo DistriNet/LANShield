@@ -51,11 +51,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import org.distrinet.lanshield.R
-import org.distrinet.lanshield.VPN_SERVICE_STATUS
 import org.distrinet.lanshield.Policy
+import org.distrinet.lanshield.R
 import org.distrinet.lanshield.STUDY_MORE_INFO_URL
 import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
+import org.distrinet.lanshield.VPN_SERVICE_STATUS
 import org.distrinet.lanshield.ui.LANShieldIcons
 import org.distrinet.lanshield.ui.theme.LANShieldTheme
 
@@ -66,7 +66,9 @@ internal fun OverviewRoute(
 
     val vpnConnectionRequested = viewModel.vpnConnectionRequested.collectAsStateWithLifecycle()
     val vpnServiceStatus by viewModel.vpnServiceStatus.observeAsState()
-    val vpnServiceAlwaysOnStatus by viewModel.vpnServiceAlwaysOnStatus.observeAsState(VPN_ALWAYS_ON_STATUS.ENABLED)
+    val vpnServiceAlwaysOnStatus by viewModel.vpnServiceAlwaysOnStatus.observeAsState(
+        VPN_ALWAYS_ON_STATUS.ENABLED
+    )
     val defaultPolicy by viewModel.defaultPolicy.collectAsStateWithLifecycle(initialValue = Policy.DEFAULT)
     val amountBlockedApps by viewModel.amountBlockedApps.observeAsState(initial = 0)
     val amountAllowedApps by viewModel.amountAllowedApps.observeAsState(initial = 0)
@@ -125,7 +127,7 @@ internal fun OverviewScreen(
     amountBlockedApps: Int
 ) {
 
-    var shouldShowAlwaysOnInfoDialog by remember { mutableStateOf( false ) }
+    var shouldShowAlwaysOnInfoDialog by remember { mutableStateOf(false) }
 
     Scaffold(topBar = { TopBarOverview() }) { innerPadding ->
         Column(
@@ -190,7 +192,10 @@ internal fun OverviewScreen(
                     .align(Alignment.CenterHorizontally)
                     .padding(vertical = 8.dp)
             ) {
-                Text(stringResource(R.string.learn_more_on_lanshield_eu), textAlign = TextAlign.Center)
+                Text(
+                    stringResource(R.string.learn_more_on_lanshield_eu),
+                    textAlign = TextAlign.Center
+                )
             }
 //            OverviewStatus(defaultPolicy = defaultPolicy, amountAllowedApps = amountAllowedApps, amountBlockedApps = amountBlockedApps )
             Spacer(modifier = Modifier.weight(1f))
@@ -229,11 +234,11 @@ fun openVpnSettings(context: Context) {
     try {
         val intent = Intent(Settings.ACTION_VPN_SETTINGS)
         context.startActivity(intent)
-    }
-    catch(_: ActivityNotFoundException) {
+    } catch (_: ActivityNotFoundException) {
     }
 
 }
+
 @Composable
 internal fun InfoDialog(
     onDismiss: () -> Unit,
@@ -295,7 +300,8 @@ fun OverviewStatus(defaultPolicy: Policy, amountBlockedApps: Int, amountAllowedA
                         R.string.manually_blocked_app_with_amount,
                         amountBlockedApps,
                         if (amountBlockedApps != 1) "s" else ""
-                    ))
+                    )
+                )
             } else {
                 Text(stringResource(R.string.policy_block_lan_traffic))
                 Text(
@@ -303,7 +309,8 @@ fun OverviewStatus(defaultPolicy: Policy, amountBlockedApps: Int, amountAllowedA
                         R.string.manually_allowed_app_with_amount,
                         amountAllowedApps,
                         if (amountAllowedApps != 1) "s" else ""
-                    ))
+                    )
+                )
             }
         }
 

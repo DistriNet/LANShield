@@ -2,11 +2,8 @@ package org.distrinet.lanshield.vpnservice
 
 import android.app.Notification
 import android.app.PendingIntent
-import android.content.BroadcastReceiver
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
-import android.net.IpPrefix
 import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
@@ -24,23 +21,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import org.distrinet.lanshield.DEFAULT_POLICY_KEY
-import org.distrinet.lanshield.R
-import org.distrinet.lanshield.SERVICE_NOTIFICATION_CHANNEL_ID
-import org.distrinet.lanshield.SYSTEM_APPS_POLICY_KEY
-import org.distrinet.lanshield.ALLOW_MULTICAST
 import org.distrinet.lanshield.ALLOW_DNS
+import org.distrinet.lanshield.ALLOW_MULTICAST
+import org.distrinet.lanshield.DEFAULT_POLICY_KEY
 import org.distrinet.lanshield.HIDE_DNS_NOT
 import org.distrinet.lanshield.HIDE_MULTICAST_NOT
 import org.distrinet.lanshield.MainActivity
-import org.distrinet.lanshield.VPN_SERVICE_STATUS
-import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
-import org.distrinet.lanshield.database.model.LanAccessPolicy
 import org.distrinet.lanshield.Policy
-import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
+import org.distrinet.lanshield.R
+import org.distrinet.lanshield.SERVICE_NOTIFICATION_CHANNEL_ID
+import org.distrinet.lanshield.SYSTEM_APPS_POLICY_KEY
 import org.distrinet.lanshield.TAG
+import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
+import org.distrinet.lanshield.VPN_SERVICE_STATUS
 import org.distrinet.lanshield.database.dao.LANShieldSessionDao
+import org.distrinet.lanshield.database.dao.LanAccessPolicyDao
 import org.distrinet.lanshield.database.model.LANShieldSession
+import org.distrinet.lanshield.database.model.LanAccessPolicy
 import tech.httptoolkit.android.vpn.socket.IProtectSocket
 import tech.httptoolkit.android.vpn.socket.SocketProtector
 import java.net.InetAddress
@@ -138,9 +135,12 @@ class VPNService : VpnService(), IProtectSocket {
                     if (!isVPNRunning()) {
                         LANShieldNotificationManager(this).createNotificationChannels()
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                            startForeground(1, createNotification(), FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED)
-                        }
-                        else {
+                            startForeground(
+                                1,
+                                createNotification(),
+                                FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+                            )
+                        } else {
                             startForeground(1, createNotification())
                         }
                         startVPNThread()
@@ -166,7 +166,7 @@ class VPNService : VpnService(), IProtectSocket {
     }
 
     private fun stopLanShieldSession() {
-        if(lanShieldSession != null) {
+        if (lanShieldSession != null) {
             lanShieldSession!!.timeEnd = System.currentTimeMillis()
             val session = lanShieldSession!!
             CoroutineScope(Dispatchers.IO).launch {
@@ -222,8 +222,7 @@ class VPNService : VpnService(), IProtectSocket {
 
         try {
             vpnInterface?.close()
-        }
-        catch (_: IOException) {
+        } catch (_: IOException) {
         }
         vpnInterface = null
 
@@ -284,11 +283,11 @@ class VPNService : VpnService(), IProtectSocket {
             // multicast addresses here already, but that requires a higher API level, so instead
             // we have to filter that address while processing packets.
             .addRoute("ff00::", 8)
-            // TODO: Filter global-scope multicast later on in the processing of packets.
-            // .excludeRoute("ff0e::", 16)
+        // TODO: Filter global-scope multicast later on in the processing of packets.
+        // .excludeRoute("ff0e::", 16)
     }
 
-    private fun getNetworkAddress(address: InetAddress, prefixLength: Short) : InetAddress {
+    private fun getNetworkAddress(address: InetAddress, prefixLength: Short): InetAddress {
         val fullBytes = prefixLength / 8
         val remainingBits = prefixLength % 8
         var addressBytes = address.address.copyOfRange(0, fullBytes)
@@ -312,14 +311,17 @@ class VPNService : VpnService(), IProtectSocket {
             for (address in networkInterface.interfaceAddresses) {
                 if (address.address.isAnyLocalAddress or
                     address.address.isLinkLocalAddress or
-                    address.address.isSiteLocalAddress) continue
+                    address.address.isSiteLocalAddress
+                ) continue
                 val networkAddress = getNetworkAddress(address.address, address.networkPrefixLength)
                 builder.addRoute(networkAddress, address.networkPrefixLength.toInt())
-                Log.d(TAG, "Also monitoring " + networkAddress.toString()+ "/" + address.networkPrefixLength.toString())
+                Log.d(
+                    TAG,
+                    "Also monitoring " + networkAddress.toString() + "/" + address.networkPrefixLength.toString()
+                )
             }
         }
     }
-
 
 
     private fun startVPNThread() {
@@ -365,6 +367,6 @@ class VPNService : VpnService(), IProtectSocket {
     }
 
     private fun updateAlwaysOnStatus() {
-        vpnAlwaysOnStatus.postValue(if(isAlwaysOn) VPN_ALWAYS_ON_STATUS.ENABLED else VPN_ALWAYS_ON_STATUS.DISABLED)
+        vpnAlwaysOnStatus.postValue(if (isAlwaysOn) VPN_ALWAYS_ON_STATUS.ENABLED else VPN_ALWAYS_ON_STATUS.DISABLED)
     }
 }

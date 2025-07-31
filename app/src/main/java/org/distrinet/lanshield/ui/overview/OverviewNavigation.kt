@@ -9,7 +9,8 @@ import androidx.navigation.compose.composable
 const val OVERVIEW_ROUTE = "overview_route"
 
 
-fun NavController.navigateToOverview(navOptions: NavOptions?= null) = navigate(OVERVIEW_ROUTE, navOptions)
+fun NavController.navigateToOverview(navOptions: NavOptions? = null) =
+    navigate(OVERVIEW_ROUTE, navOptions)
 
 fun NavGraphBuilder.overviewScreen() {
     composable(

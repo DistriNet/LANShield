@@ -82,7 +82,7 @@ interface FlowDao {
     @Query(
         "UPDATE flow SET timeEndAtLastSync = :timeEndLast WHERE uuid = :flowId"
     )
-    fun updateFlowsSyncedTime(flowId:UUID, timeEndLast: Long)
+    fun updateFlowsSyncedTime(flowId: UUID, timeEndLast: Long)
 
     @Query("DELETE FROM Flow WHERE uuid IN (:ids) AND scheduledForDeletion=1")
     fun removeAllScheduledForDeletionById(ids: List<UUID>)

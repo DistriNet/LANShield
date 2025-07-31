@@ -19,7 +19,10 @@ import javax.inject.Inject
 
 
 @HiltViewModel
-class OpenPortsViewModel @Inject constructor(vpnServiceStatus: MutableLiveData<VPN_SERVICE_STATUS>, val openPortsDao: OpenPortsDao) : ViewModel() {
+class OpenPortsViewModel @Inject constructor(
+    vpnServiceStatus: MutableLiveData<VPN_SERVICE_STATUS>,
+    val openPortsDao: OpenPortsDao
+) : ViewModel() {
 
     val vpnServiceStatus: LiveData<VPN_SERVICE_STATUS> = vpnServiceStatus
 
@@ -33,7 +36,7 @@ class OpenPortsViewModel @Inject constructor(vpnServiceStatus: MutableLiveData<V
     fun refreshOpenPorts(context: Context) {
         _isRefreshing.value = true
         viewModelScope.launch(Dispatchers.Default) {
-            val openPorts =  findOpenPorts(
+            val openPorts = findOpenPorts(
                 pm = context.packageManager,
                 connectivityManager = context.getSystemService(ConnectivityManager::class.java)
             )

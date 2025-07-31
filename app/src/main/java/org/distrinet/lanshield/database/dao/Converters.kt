@@ -35,16 +35,19 @@ class StringListConverter {
         return data?.split(",")?.map { it.trim() }?.toList()
     }
 }
-class StringUUIDConverter{
+
+class StringUUIDConverter {
     @TypeConverter
-    fun fromStringToUUID(data: String?): UUID?{
+    fun fromStringToUUID(data: String?): UUID? {
         return UUID.fromString(data)
     }
+
     @TypeConverter
     fun fromUUIDToString(data: UUID?): String {
         return data.toString()
     }
 }
+
 class InetSocketAddressConverter {
     @TypeConverter
     fun fromInetSocketAddress(address: InetSocketAddress?): String? {
@@ -58,12 +61,12 @@ class InetSocketAddressConverter {
         if (address == null) return null
         // Split the string back into the host and port components
         val colonIndex = address.lastIndexOf(':')
-        if(colonIndex == -1) return null
+        if (colonIndex == -1) return null
 
 
         return try {
             val host = address.substring(0, colonIndex)
-            val port = address.substring(colonIndex+1).toInt()
+            val port = address.substring(colonIndex + 1).toInt()
             InetSocketAddress(host, port)
         } catch (e: NumberFormatException) {
             // Handle the case where the port is not a valid integer
