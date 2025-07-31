@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 //import com.google.fire[DELETEME]base.crashlytics.buildtools.gradle.CrashlyticsExtension
 
 val useFirebase: Boolean by lazy {
@@ -13,18 +15,18 @@ plugins {
 }
 
 if(useFirebase) {
-//    apply(plugin = "com.google.gms.go[DELETEME]ogle-services")
+kotlin//    apply(plugin = "com.google.gms.go[DELETEME]ogle-services")
 //    apply(plugin = "com.google.fire[DELETEME]base.crashlytics")
 }
 
 android {
     namespace = "org.distrinet.lanshield"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "org.distrinet.lanshield"
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 14
         versionName = "0.93"
 
@@ -36,6 +38,7 @@ android {
             cmake {
                 cppFlags += "-g"
                 cFlags += "-g"
+                arguments += listOf("-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON")
             }
         }
     }
@@ -84,18 +87,16 @@ android {
 
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+
     buildFeatures {
         compose = true
         buildConfig = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        kotlinCompilerExtensionVersion = "1.5.15"
     }
     dependenciesInfo {
         // Disables dependency metadata when building APKs.
@@ -114,6 +115,12 @@ android {
             path = file("src/main/jni/CMakeLists.txt")
             version = "3.22.1"
         }
+    }
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_11
     }
 }
 
