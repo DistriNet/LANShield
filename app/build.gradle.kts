@@ -15,7 +15,7 @@ plugins {
 }
 
 if(useFirebase) {
-    kotlin//    apply(plugin = "com.google.gms.go[DELETEME]ogle-services")
+//    apply(plugin = "com.google.gms.go[DELETEME]ogle-services")
 //    apply(plugin = "com.google.fire[DELETEME]base.crashlytics")
 }
 
@@ -27,8 +27,8 @@ android {
         applicationId = "org.distrinet.lanshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 14
-        versionName = "0.93"
+        versionCode = 16
+        versionName = "0.94"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
