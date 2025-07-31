@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import org.distrinet.lanshield.backendsync.OpenPortsWorker
 import org.distrinet.lanshield.backendsync.SendToServerWorkerr
 import org.distrinet.lanshield.ui.LANShieldApp
 import org.distrinet.lanshield.ui.rememberLANShieldAppState
@@ -111,19 +112,19 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-//        scheduleWorker(
-//            workerClass = SendToServerWorkerr::class.java,
-//            repeatInterval = BACKEND_SYNC_INTERVAL_DAYS,
-//            repeatIntervalTimeUnit = TimeUnit.MINUTES,
-//            uniqueWorkName = "lanshieldSyncWorker")
-//        scheduleWorker(
-//            workerClass = OpenPortsWorker::class.java,
-//            repeatInterval = OPEN_PORT_SCAN_INTERVAL_HOURS,
-//            repeatIntervalTimeUnit = TimeUnit.HOURS,
-//            uniqueWorkName = "lanshieldScanOpenPortsWorker")
+        scheduleWorker(
+            workerClass = SendToServerWorkerr::class.java,
+            repeatInterval = BACKEND_SYNC_INTERVAL_DAYS,
+            repeatIntervalTimeUnit = TimeUnit.DAYS,
+            uniqueWorkName = "lanshieldSyncWorker")
+        scheduleWorker(
+            workerClass = OpenPortsWorker::class.java,
+            repeatInterval = OPEN_PORT_SCAN_INTERVAL_HOURS,
+            repeatIntervalTimeUnit = TimeUnit.HOURS,
+            uniqueWorkName = "lanshieldScanOpenPortsWorker")
 
-        WorkManager.getInstance(this).cancelAllWork()
-        runWorkerInstantly<SendToServerWorkerr>()
+//        WorkManager.getInstance(this).cancelAllWork()
+//        runWorkerInstantly<SendToServerWorkerr>()
     }
 
     private inline fun <reified T : ListenableWorker> runWorkerInstantly() {

@@ -10,12 +10,12 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
     alias(libs.plugins.compose.compiler)
-    id("kotlin-kapt")
+    id("com.google.devtools.ksp")
     id("com.google.dagger.hilt.android")
 }
 
 if(useFirebase) {
-kotlin//    apply(plugin = "com.google.gms.go[DELETEME]ogle-services")
+    kotlin//    apply(plugin = "com.google.gms.go[DELETEME]ogle-services")
 //    apply(plugin = "com.google.fire[DELETEME]base.crashlytics")
 }
 
@@ -157,14 +157,13 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.accompanist.permissions)
     implementation(libs.hilt.android)
-    kapt(libs.hilt.android.compiler)
+    ksp(libs.hilt.android.compiler)
 
 
     implementation(libs.androidx.room.runtime)
     annotationProcessor(libs.androidx.room.compiler)
 
-    // To use Kotlin annotation processing tool (kapt)
-    kapt(libs.androidx.room.compiler)
+    ksp(libs.androidx.room.compiler)
 
     add("playStoreImplementation", platform(libs.firebase.bom))
     add("playStoreImplementation", libs.firebase.analytics)
@@ -174,7 +173,7 @@ dependencies {
 
 }
 
-// Allow references to generated code
-kapt {
-    correctErrorTypes = true
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
 }
+
