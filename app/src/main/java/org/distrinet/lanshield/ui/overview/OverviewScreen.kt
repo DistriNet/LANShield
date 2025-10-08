@@ -47,6 +47,8 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -191,6 +193,10 @@ internal fun OverviewScreen(
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(vertical = 8.dp)
+                    .semantics {
+                        contentDescription =
+                            context.getString(R.string.learn_more_on_lanshield_eu_opens_in_browser)
+                    }
             ) {
                 Text(
                     stringResource(R.string.learn_more_on_lanshield_eu),
@@ -216,6 +222,10 @@ internal fun OverviewScreen(
                         onClick = { shouldShowVPNPermissionInfoDialog.value = true },
                         modifier = Modifier
                             .padding(bottom = 16.dp)
+                            .semantics {
+                                contentDescription =
+                                    context.getString(R.string.why_is_there_a_vpn_notification_opens_explanation_dialog)
+                            }
                     ) {
                         Text("Why is there a VPN notification?", textAlign = TextAlign.Center)
                     }

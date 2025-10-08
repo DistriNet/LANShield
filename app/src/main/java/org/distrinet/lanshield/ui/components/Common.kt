@@ -26,6 +26,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.core.content.FileProvider
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
@@ -56,8 +57,11 @@ fun LanShieldInfoDialog(
     AlertDialog(
         modifier = modifier,
         icon = {
-            Icon(LANShieldIcons.Info, contentDescription = stringResource(R.string.info))
-        },
+            Icon(
+                LANShieldIcons.Info,
+                contentDescription = null, // mark decorative
+                modifier = Modifier.clearAndSetSemantics { } // Remove from focus order
+            )        },
         title = title,
         text = text,
         onDismissRequest = onDismiss,
@@ -182,9 +186,9 @@ fun PackageIcon(modifier: Modifier = Modifier, packageName: String) {
     if (bitmap != null) {
         Image(
             bitmap = bitmap!!,
-            contentDescription = stringResource(R.string.logo),
+            contentDescription = null,
             contentScale = ContentScale.Fit,
-            modifier = modifier
+            modifier = modifier.clearAndSetSemantics {}
         )
     } else {
         UnknownPackageIcon(modifier = modifier, packageName = packageName)

@@ -44,6 +44,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -165,16 +172,34 @@ fun SettingsTopBar(modifier: Modifier = Modifier) {
 @Composable
 fun SettingsClickableComp(
     icon: ImageVector,
-    @StringRes iconDesc: Int,
     @StringRes name: Int,
     @StringRes description: Int? = null,
+    opensExternally: Boolean = false,
     onClick: () -> Unit
 ) {
+
+    // Combine all text info into one clear semantic label for accessibility
+    val fullDescription = buildString {
+        append(stringResource(id = name))
+        if (description != null) {
+            append(". ")
+            append(stringResource(id = description))
+        }
+        if (opensExternally) {
+            append(". Opens in browser.")
+        }
+    }
+
     Surface(
         color = Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp),
+            .padding(horizontal = 4.dp)
+            .semantics {
+                // Prevent screen reader from reading inner Text/Icons separately
+                contentDescription = fullDescription
+                role = Role.Button
+            },
         onClick = onClick,
     ) {
         Column {
@@ -189,7 +214,8 @@ fun SettingsClickableComp(
 //                            color = MaterialTheme.colorScheme.surfaceTint
                         ),
                         modifier = Modifier
-                            .padding(top = 16.dp, bottom = 16.dp, end = 16.dp, start = 16.dp),
+                            .padding(top = 16.dp, bottom = 16.dp, end = 16.dp, start = 16.dp)
+                            .clearAndSetSemantics { },
                         textAlign = TextAlign.Start,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -198,7 +224,8 @@ fun SettingsClickableComp(
                             text = stringResource(id = description),
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier
-                                .padding(start = 24.dp, bottom = 4.dp),
+                                .padding(start = 24.dp, bottom = 4.dp)
+                                .clearAndSetSemantics { },
                             textAlign = TextAlign.Start,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -207,9 +234,10 @@ fun SettingsClickableComp(
                 Spacer(modifier = Modifier.weight(1.0f))
                 Icon(
                     imageVector = icon,
-                    contentDescription = stringResource(id = iconDesc),
+                    contentDescription = null, // decorative icon
                     tint = MaterialTheme.colorScheme.surfaceTint,
                     modifier = Modifier.padding(end = 8.dp)
+                                .clearAndSetSemantics { }
 //                            .size(24.dp)
                 )
             }
@@ -224,11 +252,30 @@ fun SettingsPolicy(
     policy: Policy,
     onChangePolicy: (Policy) -> Unit
 ) {
+
+    val policyLabel = if (policy == Policy.BLOCK) {
+        stringResource(R.string.block)
+    } else {
+        stringResource(R.string.allow)
+    }
+
     Surface(
         color = Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(4.dp),
+            .padding(4.dp)
+            .semantics(mergeDescendants = true) {
+                // Make it clear this is a selectable/toggle control
+                role = Role.Button
+                stateDescription = "Selected: $policyLabel"
+                contentDescription = text
+                onClick(label = "Toggle policy") {
+                    val newPolicy =
+                        if (policy == Policy.BLOCK) Policy.ALLOW else Policy.BLOCK
+                    onChangePolicy(newPolicy)
+                    true
+                }
+            },
         onClick = {
             val newPolicy = if (policy == Policy.BLOCK) Policy.ALLOW else Policy.BLOCK
             onChangePolicy(newPolicy)
@@ -459,7 +506,6 @@ internal fun SettingsScreen(
                 SettingsClickableComp(
                     name = R.string.manage_notifications,
                     icon = LANShieldIcons.ChevronRight,
-                    iconDesc = R.string.manage_notifications,
                     onClick = { startActivity(context, manageNotificationsIntent, null) }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
@@ -490,7 +536,6 @@ internal fun SettingsScreen(
                 SettingsClickableComp(
                     name = R.string.per_app_exceptions,
                     icon = LANShieldIcons.ChevronRight,
-                    iconDesc = R.string.per_app_exceptions,
                     onClick = navigateToPerAppExceptions
                 )
                 AnimatedVisibility(visible = defaultPolicy == Policy.BLOCK) {
@@ -556,7 +601,7 @@ internal fun SettingsScreen(
                 SettingsClickableComp(
                     name = R.string.more_info,
                     icon = LANShieldIcons.OpenInNewOutlined,
-                    iconDesc = R.string.more_info,
+                    opensExternally = true,
                     onClick = { uriHandler.openUri(STUDY_MORE_INFO_URL) }
                 )
             }
@@ -564,21 +609,21 @@ internal fun SettingsScreen(
                 SettingsClickableComp(
                     name = R.string.give_feedback,
                     icon = LANShieldIcons.FeedbackOutlined,
-                    iconDesc = R.string.give_feedback,
+                    opensExternally = true,
                     onClick = { uriHandler.openUri(FEEDBACK_URL) }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 SettingsClickableComp(
                     name = R.string.privacy_policy,
                     icon = LANShieldIcons.OpenInNewOutlined,
-                    iconDesc = R.string.app_name,
+                    opensExternally = true,
                     onClick = { uriHandler.openUri(PRIVACY_POLICY_URL) }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 SettingsClickableComp(
                     name = R.string.about_lanshield,
                     icon = LANShieldIcons.OpenInNewOutlined,
-                    iconDesc = R.string.app_name,
+                    opensExternally = true,
                     onClick = { uriHandler.openUri(ABOUT_LANSHIELD_URL) }
                 )
             }

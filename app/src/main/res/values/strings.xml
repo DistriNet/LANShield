@@ -115,4 +115,6 @@
     <string name="open_ports">Open Ports</string>
     <string name="open_ports_info">Here you can see a list of ports opened by other apps. These are typically used to communicate with other devices on the same local network, such as for device discovery or media streaming.</string>
     <string name="pull_down_to_refresh">⬇ Pull down to refresh</string>
+    <string name="learn_more_on_lanshield_eu_opens_in_browser">Learn more on lanshield.eu, opens in browser</string>
+    <string name="why_is_there_a_vpn_notification_opens_explanation_dialog">Why is there a VPN notification? Opens explanation dialog</string>
 </resources>
