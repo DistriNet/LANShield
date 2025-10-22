@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.ConnectivityManager
 import android.net.VpnService
 import android.os.ParcelFileDescriptor
+import android.os.Process.INVALID_UID
 import android.system.OsConstants.IPPROTO_TCP
 import android.system.OsConstants.IPPROTO_UDP
 import android.util.Log
@@ -33,6 +34,9 @@ import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.ConnectException
+import java.net.Inet4Address
+import java.net.Inet6Address
+import java.net.InetSocketAddress
 import java.nio.ByteBuffer
 
 // Set on our VPN as the MTU, which should guarantee all packets fit this
@@ -285,19 +289,74 @@ class VPNRunnable(
     }
 
     private fun getPacketOwnerUid(pkt: IPHeader): Int {
-        repeat(5) {
-            try {
-                val uid = connectivityManager.getConnectionOwnerUid(
-                    pkt.protocolNumberAsOSConstant(),
-                    pkt.source,
-                    pkt.destination
+
+        // https://cs.android.com/android/platform/superproject/main/+/main:packages/modules/Connectivity/staticlibs/device/com/android/net/module/util/netlink/InetDiagMessage.java;l=226
+        // Already seems to try wildcard for UDP, but this does not seem to be reliable
+        // -> Uses the same Netlink socket for multiple requests which is not flushed, maybe second request with wildcard reads the NLMGS_DONE from the previous request?jkk
+
+        // UDP kernel bug: https://www.mail-archive.com/netdev@vger.kernel.org/msg248638.html https://isrc.iscas.ac.cn/gitlab/eulixos/software/kernel/-/commit/747569b0a7c537d680bc94a988be6caad9960488
+        // Some packets use as src the TUN interface IP, some the WLAN interface. Do we need to patch this?
+        fun InetSocketAddress.toIpv4Mapped(): InetSocketAddress? {
+            val addr = address
+            return if (addr is Inet4Address) {
+                val mapped = Inet6Address.getByAddress(
+                    null,
+                    byteArrayOf(
+                        0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0xFF.toByte(), 0xFF.toByte(),
+                        *addr.address
+                    )
                 )
-                if (uid != 0 && uid != -1) {
+                InetSocketAddress(mapped, port)
+            } else null
+        }
+
+        val proto = pkt.protocolNumberAsOSConstant()
+
+        val candidates = mutableListOf<Pair<InetSocketAddress, InetSocketAddress>>()
+
+        val src = pkt.source
+        val dst = pkt.destination
+        val isipv4 = pkt.source.address is Inet4Address
+        val src4in6 = src.toIpv4Mapped()
+        val dst4in6 = dst.toIpv4Mapped()
+
+        // Original src/dst
+        candidates += src to dst
+        //  4-in-6 mapped equivalent if applicable
+        if (src4in6 != null && dst4in6 != null) candidates += src4in6 to dst4in6
+        // Source + wildcard dest (0.0.0.0:0)
+        if(isipv4) candidates += src to InetSocketAddress("0.0.0.0", 0)
+        if(!isipv4) candidates += src to InetSocketAddress("::", 0)
+        if (src4in6 != null) candidates += src4in6 to InetSocketAddress("::", 0)
+        // UDP only: 0.0.0.0:source_port to 0.0.0.0:0 and 4-in-6 mapped equivalent
+        if (proto == IPPROTO_UDP) {
+            if (pkt.source.address is Inet4Address) {
+                candidates += InetSocketAddress("0.0.0.0", src.port) to InetSocketAddress("0.0.0.0", 0)
+                candidates += InetSocketAddress("0.0.0.0", src.port).toIpv4Mapped()!! to InetSocketAddress("0.0.0.0", 0).toIpv4Mapped()!!
+            }
+            if (pkt.source.address is Inet6Address) {
+                candidates += InetSocketAddress("::", src.port) to InetSocketAddress("::", 0)
+            }
+        }
+
+        for ((s, d) in candidates) {
+            try {
+                Log.d(TAG, "Checking: proto=$proto src=$s dst=$d")
+                var uid = connectivityManager.getConnectionOwnerUid(proto, s, d)
+                Log.d(TAG, "→ Result: uid=$uid")
+                if (uid != INVALID_UID && uid != 0) {
+                    Log.d(TAG, "✅ Match found: uid=$uid (src=$s dst=$d), original: (src=${pkt.source} dst=${pkt.destination})")
                     return uid
                 }
-
-            } catch (e: IllegalArgumentException) {
-                return -1
+                uid = connectivityManager.getConnectionOwnerUid(proto, d, s)
+                Log.d(TAG, "→ Reverse result: uid=$uid")
+                if (uid != INVALID_UID && uid != 0) {
+                    Log.d(TAG, "✅ Match found (reverse method): uid=$uid (src=$s dst=$d), original: (src=${pkt.source} dst=${pkt.destination})")
+                    return uid
+                }
+            } catch (_: IllegalArgumentException) {
+                // ignore and try next
             }
         }
         return -1
@@ -315,7 +374,7 @@ class VPNRunnable(
         }
 
         val appUid = getPacketOwnerUid(packetHeader)
-        val hasValidUid = appUid != -1 && appUid != 1000 && appUid != 0
+        val hasValidUid = appUid != -1 && appUid != 0
         val ipAddress = packetHeader.destination.address
 
         if (hasValidUid) {
