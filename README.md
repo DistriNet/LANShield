@@ -38,6 +38,13 @@ This feature was finalized in commits [`5dc7fb7f`](5dc7fb7f) and [`70b1dfaf`](70
 
 ![IMAGE_DESCRIPTION](docs/finegrained2.png)
 
+### Open port detection
+
+LANShield can also scan which apps are listening for incoming UDP packets or TCP connections.
+For this, you can click on the Open Ports icon at the bottom, and pull down the screen to scan for all apps that are listening.
+
+![IMAGE_DESCRIPTION](docs/openports.jpg)
+
 ### Linux Support
 
 The LANShield app is specific to Android. If you also want to control LAN access on Linux, then we recommend [OpenSnitch](https://github.com/evilsocket/opensnitch). We [conributed code](https://github.com/evilsocket/opensnitch/pull/1237) to OpenSnitch to make it easier to specifically control LAN access.
