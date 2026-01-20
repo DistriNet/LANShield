@@ -107,38 +107,6 @@ fun generateFilename(): String {
 }
 
 @Composable
-fun ExportFile(
-    context: Context,
-    allFlows: List<LANFlow>
-) {
-    val fileToShare = File(context.cacheDir, generateFilename())
-    val array = JSONArray()
-    for (flow in allFlows) {
-        array.put(flow.toJSON())
-    }
-    val json = JSONObject()
-    json.put("device_sdk", Build.VERSION.SDK_INT)
-    json.put("model", Build.MODEL)
-    json.put("flows", array)
-    FileOutputStream(fileToShare).use {
-        it.write(json.toString().toByteArray())
-    }
-    val uri = FileProvider.getUriForFile(
-        context,
-        "${context.packageName}.fileprovider",
-        fileToShare
-    )
-    val sendIntent = Intent().apply {
-        action = Intent.ACTION_SEND
-        putExtra(Intent.EXTRA_STREAM, uri)
-        type = "application/json"
-        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    }
-    val shareIntent = Intent.createChooser(sendIntent, null)
-    context.startActivity(shareIntent)
-}
-
-@Composable
 fun PolicyFilterName(policy: Policy) {
     return when (policy) {
         Policy.DEFAULT -> Text(text = stringResource(R.string.all))
