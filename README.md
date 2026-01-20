@@ -22,7 +22,7 @@ LANShield allows users to control which apps are (dis)allowed to access the LAN.
 When LANShield detect LAN traffic, it saves relevant data to enable later analyses of LAN access behaviour.
 In particular, LANShield assigns intercepted packets to _flows_ where a _flow_ is a TCP or UDP connection or session, respectively, meaning many packets may belong to a specific flow. We then log which app initiated this flow, as well as how long this flow lasted, the source and destination IPs, the source and destination ports, and the amount of data and packets transmitted (both ingress and egress). These flows are available to the user, as shown below, and they **can also export all flows to a JSON file by clicking on the shared button (encircled in red below)**.
 
-This export functionality is implemented by the function `ExportFile` in [`Common.kt`](app/src/main/java/org/distrinet/lanshield/ui/components/Common.kt).
+This export functionality is implemented by the function `exportFlows` in [`LanTrafficViewModel.kt`](app/src/main/java/org/distrinet/lanshield/ui/lantraffic/LANTrafficViewModel.kt).
 
 ![IMAGE_DESCRIPTION](docs/export1.png)
 
