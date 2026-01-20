@@ -60,7 +60,6 @@ const val ADD_LANSHIELD_SESSION = "/add_session"
 const val ADD_OPEN_PORTS = "/add_open_ports"
 
 const val GET_APP_INSTALLATION_UUID = "/get_app_installation_uuid"
-const val SHOULD_SYNC = "/should_sync"
 const val OPEN_PORTS_SUCCESS = "Open ports uploaded successfully"
 const val ACL_SUCCESS = "ACL uploaded successfully"
 const val APP_USAGE_SUCCESS = "App usage uploaded successfully"

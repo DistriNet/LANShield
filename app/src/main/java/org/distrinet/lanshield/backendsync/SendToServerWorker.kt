@@ -33,13 +33,11 @@ import org.distrinet.lanshield.ADD_OPEN_PORTS
 import org.distrinet.lanshield.APP_INSTALLATION_UUID
 import org.distrinet.lanshield.APP_USAGE_SUCCESS
 import org.distrinet.lanshield.BACKEND_URL
-import org.distrinet.lanshield.BuildConfig
 import org.distrinet.lanshield.GET_APP_INSTALLATION_UUID
 import org.distrinet.lanshield.OPEN_PORTS_SUCCESS
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.SHARE_APP_USAGE_KEY
 import org.distrinet.lanshield.SHARE_LAN_METRICS_KEY
-import org.distrinet.lanshield.SHOULD_SYNC
 import org.distrinet.lanshield.TAG
 import org.distrinet.lanshield.TIME_OF_LAST_SYNC
 import org.distrinet.lanshield.crashreport.crashReporter
@@ -80,12 +78,8 @@ class SendToServerWorkerr @AssistedInject constructor(
             return Result.success()
         }
 
-        invokeBackendForSync()
+        sendRoutineRequests()
         return Result.success()
-    }
-
-    private fun invokeBackendForSync() {
-        apiRequest(Request.Method.GET, SHOULD_SYNC, null)
     }
 
     private suspend fun sendRequestsRequiringUUID() {
@@ -146,7 +140,6 @@ class SendToServerWorkerr @AssistedInject constructor(
                     ADD_ACL -> handleACLResponse(response)
                     ADD_APP_USAGE -> handleAppUsageResponse(response)
                     ADD_FLOWS -> handleAddFlowResponse(response)
-                    SHOULD_SYNC -> handleShouldSyncResponse(response)
                     ADD_LANSHIELD_SESSION -> handleAddLanShieldSessionsResponse(response)
                     ADD_OPEN_PORTS -> handleAddOpenPortsResponse(response)
                 }
@@ -170,29 +163,6 @@ class SendToServerWorkerr @AssistedInject constructor(
         )
         queue.add(jsonRequest)
 
-    }
-
-    private fun handleShouldSyncResponse(response: JSONObject) {
-        var shouldSync = false
-        var appVersionsAllowed = listOf<String>()
-        try {
-            shouldSync = response.getBoolean("should_sync")
-            appVersionsAllowed = response.getString("app_versions").split(",")
-        } catch (e: JSONException) {
-            Log.e(TAG, e.toString())
-            crashReporter.recordException(e)
-        }
-        if (shouldSync && isVersionAllowed(appVersionsAllowed)) {
-            runBlocking {
-                sendRoutineRequests()
-            }
-        }
-
-    }
-
-    private fun isVersionAllowed(appVersionsAllowed: List<String>): Boolean {
-        val versionName: String = BuildConfig.VERSION_NAME
-        return appVersionsAllowed.contains(versionName)
     }
 
     private suspend fun sendRoutineRequests() {
