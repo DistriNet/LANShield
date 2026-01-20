@@ -1,6 +1,6 @@
 [versions]
 accompanistPermissions = "0.37.3"
-agp = "8.11.1"
+agp = "8.13.2"
 datastorePreferences = "1.1.7"
 firebaseBom = "34.0.0"
 hiltAndroid = "2.57"
