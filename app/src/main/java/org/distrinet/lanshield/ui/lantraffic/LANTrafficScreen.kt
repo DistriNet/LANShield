@@ -43,9 +43,7 @@ import androidx.compose.ui.unit.dp
 import org.distrinet.lanshield.PackageMetadata
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.database.model.FlowAverage
-import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.getPackageMetadata
-import org.distrinet.lanshield.ui.components.ExportFile
 import org.distrinet.lanshield.ui.components.LANShieldCombinedTopBar
 import org.distrinet.lanshield.ui.components.LanShieldInfoDialog
 import org.distrinet.lanshield.ui.components.PackageIcon
@@ -55,6 +53,7 @@ import java.text.DateFormat
 import java.util.Date
 
 
+
 @Composable
 internal fun LANTrafficRoute(
     modifier: Modifier = Modifier,
@@ -62,13 +61,13 @@ internal fun LANTrafficRoute(
     onNavigateToLANTrafficPerApp: (packageName: String) -> Unit,
 ) {
     val flowAverages by viewModel.liveFlowAverages.collectAsState(initial = listOf())
-    val allFlows by viewModel.allFlows.collectAsState(initial = listOf())
+    val context = LocalContext.current
 
     LANTrafficScreen(
         modifier = modifier,
         flowAverages = flowAverages,
-        allFlows = allFlows,
         onNavigateToLANTrafficPerApp = onNavigateToLANTrafficPerApp,
+        onClickExport = { viewModel.exportFlows(context) }
     )
 
 }
@@ -82,8 +81,8 @@ fun LANTrafficScreenPreview() {
 
     LANTrafficScreen(
         flowAverages = listOf(flowAverage1, flowAverage2, flowAverage3),
-        allFlows = listOf(),
-        onNavigateToLANTrafficPerApp = {})
+        onNavigateToLANTrafficPerApp = {},
+        onClickExport = {})
 }
 
 @Preview
@@ -91,8 +90,8 @@ fun LANTrafficScreenPreview() {
 fun LANTrafficScreenPreviewEmpty() {
     LANTrafficScreen(
         flowAverages = listOf(),
-        allFlows = listOf(),
-        onNavigateToLANTrafficPerApp = {})
+        onNavigateToLANTrafficPerApp = {},
+        onClickExport = {})
 }
 
 @Preview
@@ -262,12 +261,11 @@ internal fun processFlowAverages(
 internal fun LANTrafficScreen(
     modifier: Modifier = Modifier,
     flowAverages: List<FlowAverage>,
-    allFlows: List<LANFlow>,
-    onNavigateToLANTrafficPerApp: (packageName: String) -> Unit
+    onNavigateToLANTrafficPerApp: (packageName: String) -> Unit,
+    onClickExport: () -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
     var searchQuery by remember { mutableStateOf("") }
-    var exportLanTraffic by remember { mutableStateOf(false) }
     var showHelpDialog by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val processedFlowAverages = remember(flowAverages, searchQuery) {
@@ -283,8 +281,8 @@ internal fun LANTrafficScreen(
                 titleId = R.string.lan_traffic,
                 setSearchQuery = { searchQuery = it },
                 onClickShowHelpDialog = { showHelpDialog = true },
-                onClickExport = { exportLanTraffic = true },
-                isExportEnabled = allFlows.isNotEmpty()
+                isExportEnabled = true,
+                onClickExport = onClickExport
             )
         }) { innerPadding ->
         if (showHelpDialog) {
@@ -292,13 +290,6 @@ internal fun LANTrafficScreen(
                 onDismiss = { showHelpDialog = false },
                 title = { Text(stringResource(id = R.string.lan_traffic)) },
                 text = { Text(stringResource(id = R.string.lan_traffic_info)) })
-        }
-        if (exportLanTraffic) {
-            ExportFile(
-                context,
-                allFlows
-            )
-            exportLanTraffic = false
         }
 
         LazyColumn(
@@ -318,7 +309,6 @@ internal fun LANTrafficScreen(
                     processedFlowAverage = it,
                     onNavigateToLANTrafficPerApp = onNavigateToLANTrafficPerApp
                 )
-//                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
             }
         }
         if (flowAverages.isEmpty()) {

@@ -14,12 +14,15 @@ import org.distrinet.lanshield.database.model.LANFlow
 import java.util.UUID
 
 @Dao
-interface FlowDao {
+interface  FlowDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertFlow(LANFlow: LANFlow)
 
     @Query("SELECT * FROM Flow")
     fun getAllFlows(): Flow<List<LANFlow>>
+
+    @Query("SELECT * FROM Flow ORDER BY rowid LIMIT :limit OFFSET :offset")
+    suspend fun getFlowsPaged(limit: Int, offset: Int): List<LANFlow>
 
     @Query("SELECT * FROM Flow WHERE uuid = :uuid")
     fun getFlowById(uuid: UUID): LANFlow?
