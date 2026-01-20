@@ -153,7 +153,7 @@ Java_org_distrinet_lanshield_vpnservice_VPNRunnable_00024Companion__1doDPI(JNIEn
 
     ndpi_free_flow_data(&ndpi_flow);
 
-    (*env)->ReleaseByteArrayElements(env, packet, pkt_data_no_offset, 0);
+    (*env)->ReleaseByteArrayElements(env, packet, pkt_data_no_offset, JNI_ABORT);
 
     // Find and set the `jsonBuffer` field
     jclass dpiResultClass = (*env)->GetObjectClass(env, dpi_result);
