@@ -1,5 +1,7 @@
 # LANShield
 
+[![CI](https://github.com/DistriNet/LANShield/actions/workflows/ci.yml/badge.svg)](https://github.com/DistriNet/LANShield/actions/workflows/ci.yml)
+
 This repository contains the source code of the LANShield Android app. You can visit the project's website at [lanshield.eu](https://lanshield.eu/) and download the app from the following sources:
 
 * [Google Play Store](https://play.google.com/store/apps/details?id=org.distrinet.lanshield)
