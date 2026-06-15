@@ -17,6 +17,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.lifecycleScope
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ListenableWorker
@@ -25,6 +26,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequest
 import androidx.work.WorkManager
+import androidx.work.WorkRequest
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -33,7 +35,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.distrinet.lanshield.backendsync.OpenPortsWorker
-import org.distrinet.lanshield.backendsync.SendToServerWorkerr
+import org.distrinet.lanshield.backendsync.SendToServerWorker
 import org.distrinet.lanshield.ui.LANShieldApp
 import org.distrinet.lanshield.ui.rememberLANShieldAppState
 import org.distrinet.lanshield.ui.theme.LANShieldTheme
@@ -113,7 +115,7 @@ class MainActivity : ComponentActivity() {
         }
 
         scheduleWorker(
-            workerClass = SendToServerWorkerr::class.java,
+            workerClass = SendToServerWorker::class.java,
             repeatInterval = BACKEND_SYNC_INTERVAL_DAYS,
             repeatIntervalTimeUnit = TimeUnit.DAYS,
             uniqueWorkName = "lanshieldSyncWorker")
@@ -124,7 +126,7 @@ class MainActivity : ComponentActivity() {
             uniqueWorkName = "lanshieldScanOpenPortsWorker")
 
 //        WorkManager.getInstance(this).cancelAllWork()
-//        runWorkerInstantly<SendToServerWorkerr>()
+//        runWorkerInstantly<SendToServerWorker>()
     }
 
     private inline fun <reified T : ListenableWorker> runWorkerInstantly() {
@@ -147,13 +149,19 @@ class MainActivity : ComponentActivity() {
             workerClass,
             repeatInterval,
             repeatIntervalTimeUnit
-        ).setConstraints(constraints).build()
+        ).setConstraints(constraints)
+            .setBackoffCriteria(
+                BackoffPolicy.EXPONENTIAL,
+                WorkRequest.MIN_BACKOFF_MILLIS,
+                TimeUnit.MILLISECONDS
+            )
+            .build()
 
         val workManager = WorkManager.getInstance(this)
 
         workManager.enqueueUniquePeriodicWork(
             uniqueWorkName,
-            ExistingPeriodicWorkPolicy.KEEP,
+            ExistingPeriodicWorkPolicy.UPDATE,
             periodicWorkRequest
         )
     }

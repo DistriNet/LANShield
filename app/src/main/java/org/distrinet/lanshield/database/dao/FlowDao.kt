@@ -68,11 +68,12 @@ interface  FlowDao {
     @Query(
         """
         SELECT * FROM flow
-        WHERE timeEndAtLastSync < timeEnd
-        LIMIT :limit OFFSET :offset
+        WHERE timeEndAtLastSync < timeEnd AND uuid > :afterUuid
+        ORDER BY uuid
+        LIMIT :limit
     """
     )
-    fun getNotSyncedFlowsPaged(limit: Int, offset: Int): List<LANFlow>
+    fun getNotSyncedFlowsAfter(afterUuid: UUID, limit: Int): List<LANFlow>
 
     @Query(
         """

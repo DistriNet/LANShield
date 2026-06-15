@@ -15,8 +15,8 @@ import org.distrinet.lanshield.database.dao.OpenPortsDao
 class OpenPortsWorker @AssistedInject constructor(
     @Assisted appContext: Context,
     @Assisted workerParams: WorkerParameters,
-    @Assisted private val openPortsDao: OpenPortsDao,
-    @Assisted private val vpnServiceStatus: MutableLiveData<VPN_SERVICE_STATUS>
+    private val openPortsDao: OpenPortsDao,
+    private val vpnServiceStatus: MutableLiveData<VPN_SERVICE_STATUS>
 ) :
     CoroutineWorker(appContext, workerParams) {
 
