@@ -1,10 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
-//import com.google.fire[DELETEME]base.crashlytics.buildtools.gradle.CrashlyticsExtension
-
-val useFirebase: Boolean by lazy {
+val wantsPlayStoreBuild =
     gradle.startParameter.taskRequests.toString().contains("playStore", ignoreCase = true)
-}
 
 plugins {
     alias(libs.plugins.android.application)
@@ -13,14 +10,9 @@ plugins {
     id("com.google.dagger.hilt.android")
 }
 
-if(useFirebase) {
-//    apply(plugin = "com.google.gms.go[DELETEME]ogle-services")
-//    apply(plugin = "com.google.fire[DELETEME]base.crashlytics")
-}
-
 android {
     namespace = "org.distrinet.lanshield"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "org.distrinet.lanshield"
@@ -54,16 +46,6 @@ android {
                 "proguard-rules.pro"
             )
             signingConfig = signingConfigs.getByName("debug")
-
-            if(useFirebase) {
-//                configure<CrashlyticsExtension> {
-//                    // Enable processing and uploading of native symbols to Firebase servers.
-//                    // By default, this is disabled to improve build speeds.
-//                    // This flag must be enabled to see properly-symbolicated native
-//                    // stack traces in the Crashlytics dashboard.
-//                    nativeSymbolUploadEnabled = true
-//                }
-            }
         }
 
         debug {
@@ -164,16 +146,16 @@ dependencies {
     annotationProcessor(libs.androidx.room.compiler)
 
     ksp(libs.androidx.room.compiler)
-
-    add("playStoreImplementation", platform(libs.firebase.bom))
-    add("playStoreImplementation", libs.firebase.analytics)
-    add("playStoreImplementation", libs.firebase.crashlytics)
-    add("playStoreImplementation", libs.firebase.crashlytics.ndk)
-    add("playStoreImplementation", libs.google.firebase.analytics)
-
 }
 
 ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
+}
+
+if (wantsPlayStoreBuild) {
+    val firebaseConfig = layout.buildDirectory.file("firebase/firebase.gradle.kts").get().asFile
+    firebaseConfig.parentFile.mkdirs()
+    file("firebase.gradle.kts.definitelynotagradlefile").copyTo(firebaseConfig, overwrite = true)
+    apply(from = firebaseConfig)
 }
 
