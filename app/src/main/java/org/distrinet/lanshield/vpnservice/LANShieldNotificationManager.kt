@@ -181,6 +181,29 @@ class LANShieldNotificationManager(private val context: Context) {
         notificationManager.notify(activeNotification.notificationId, notification)
     }
 
+    fun postServiceErrorNotification(title: String, text: String) {
+        val openAppIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        val openAppPendingIntent = PendingIntent.getActivity(
+            context,
+            getNewIntentRequestCode(),
+            openAppIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, SERVICE_NOTIFICATION_CHANNEL_ID)
+            .setSmallIcon(R.mipmap.logo_foreground)
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setAutoCancel(true)
+            .setContentIntent(openAppPendingIntent)
+            .build()
+        notificationManager.notify(getNewNotificationId(), notification)
+    }
+
     fun createNotificationChannels() {
 
         val serviceChannel = NotificationChannel(

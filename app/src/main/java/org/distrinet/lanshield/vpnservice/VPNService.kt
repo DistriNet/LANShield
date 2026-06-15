@@ -31,6 +31,7 @@ import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
 import org.distrinet.lanshield.SERVICE_NOTIFICATION_CHANNEL_ID
 import org.distrinet.lanshield.SYSTEM_APPS_POLICY_KEY
+import org.distrinet.lanshield.crashreport.crashReporter
 import org.distrinet.lanshield.TAG
 import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
 import org.distrinet.lanshield.VPN_SERVICE_STATUS
@@ -353,8 +354,22 @@ class VPNService : VpnService(), IProtectSocket {
             .setMtu(MAX_PACKET_LEN)
             .setMetered(false)
 
-        // establish() returns null if we no longer have permissions to establish the VPN somehow
-        val vpnInterface = builder.establish() ?: return
+        val vpnInterface = try {
+            builder.establish()
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "Could not establish VPN interface", e)
+            crashReporter.recordException(e)
+            null
+        }
+        if (vpnInterface == null) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            setVPNRunning(false)
+            vpnNotificationManager.postServiceErrorNotification(
+                getString(R.string.lanshield_start_failed_title),
+                getString(R.string.lanshield_start_failed_text)
+            )
+            return
+        }
 
         this.vpnInterface = vpnInterface
         SocketProtector.getInstance().setProtector(this)
