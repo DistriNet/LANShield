@@ -173,6 +173,11 @@ public class SessionHandler {
 				session.setLastTcpHeader(tcpheader);
 				LANFlow lanFlow = session.getFlow();
 
+				// Update the advertised window on every ACK (unconditionally, since pure
+				// window-update ACKs don't pass acceptAck's gate below). The 16-bit window is
+				// parsed as a signed short, so mask to unsigned before scaling.
+				session.setClientWindow((long) (tcpheader.getWindowSize() & 0xFFFF) << session.getClientWindowScale());
+
 
 				//any data from client?
 				if (dataLength > 0) {
@@ -220,6 +225,9 @@ public class SessionHandler {
 
 				if (!session.isAbortingConnection()) {
 					manager.keepSessionAlive(session);
+					// This ACK may have reopened the window: flush staged data and resume reads.
+					nioService.pumpToClient(session);
+					nioService.refreshSelect(session);
 				}
 			}
 		} else if(tcpheader.isFIN()){
@@ -367,13 +375,18 @@ public class SessionHandler {
 			Log.e(TAG,"prev packet was corrupted, last ack# " + tcpHeader.getAckNumber());
 		}
 
-		if (
-			tcpHeader.getAckNumber() > session.getSendUnack() ||
-			tcpHeader.getAckNumber() == session.getSendNext()
-		) {
+		// Reconstruct the ACK in absolute sequence space. The unacked span (sendNext - ack) is at
+		// most one window, so taking it mod 2^32 and subtracting recovers the absolute ack even
+		// after the 32-bit sequence wraps (e.g. partway through a multi-GB download) — where the
+		// old signed comparison would have stopped accepting ACKs and stalled.
+		long sendNextAbs = session.getSendNext();
+		long unackedSpan = (sendNextAbs - (tcpHeader.getAckNumber() & 0xFFFFFFFFL)) & 0xFFFFFFFFL;
+		long ackAbs = sendNextAbs - unackedSpan;
+
+		if (ackAbs > session.getSendUnack() || ackAbs == sendNextAbs) {
 			session.setAcked(true);
 
-			session.setSendUnack(tcpHeader.getAckNumber());
+			session.setSendUnack(ackAbs);
 			session.setRecSequence(tcpHeader.getSequenceNumber());
 			session.setTimestampReplyto(tcpHeader.getTimeStampSender());
 			session.setTimestampSender((int) System.currentTimeMillis());
@@ -432,6 +445,11 @@ public class SessionHandler {
 			session.setSendNext(tcpheader.getSequenceNumber() + 1);
 			//client initial sequence has been incremented by 1 and set to ack
 			session.setRecSequence(tcpheader.getAckNumber());
+
+			// Capture the client's flow-control params. The SYN window is unscaled (RFC 7323) and
+			// parsed as a signed short, so mask to unsigned.
+			session.setClientWindowScale(tcp.getWindowScale());
+			session.setClientWindow(tcp.getWindowSize() & 0xFFFF);
 
 			session.setLastIpHeader(ip);
 			session.setLastTcpHeader(tcp);

@@ -110,6 +110,16 @@ public class SocketNIODataService implements Runnable {
 	}
 
 	/**
+	 * Run the client-direction pump for a session. The SessionHandler thread calls this after a
+	 * window-opening ACK to flush staged data the window now permits (the upstream socket has no
+	 * new readiness, so the selector wouldn't re-run the pump). Caller holds the session monitor;
+	 * follow with {@link #refreshSelect} to pick up the resumed OP_READ.
+	 */
+	public void pumpToClient(Session session){
+		reader.pumpToClient(session);
+	}
+
+	/**
 	 * Shut down the NIO thread
 	 */
 	public void shutdown(){

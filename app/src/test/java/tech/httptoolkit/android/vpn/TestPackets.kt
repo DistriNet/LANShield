@@ -73,6 +73,7 @@ object TestPackets {
     fun tcpPacket(
         srcIp: String, srcPort: Int, dstIp: String, dstPort: Int,
         seq: Long, ack: Long, flags: Int, payload: ByteArray = ByteArray(0), mss: Int? = null,
+        windowSize: Int = 65535,
     ): ByteArray {
         val optionBytes = if (mss != null) 4 else 0          // MSS option = kind(1)+len(1)+value(2)
         val tcpHeaderLen = 20 + optionBytes
@@ -88,7 +89,7 @@ object TestPackets {
         buf.putInt(t + 8, ack)
         buf[t + 12] = (dataOffsetWords shl 4).toByte()  // data offset, NS=0
         buf[t + 13] = flags.toByte()
-        buf.putShort(t + 14, 65535)   // window size
+        buf.putShort(t + 14, windowSize)   // window size
         buf.putShort(t + 16, 0)       // checksum (not verified)
         buf.putShort(t + 18, 0)       // urgent pointer
         if (mss != null) {
