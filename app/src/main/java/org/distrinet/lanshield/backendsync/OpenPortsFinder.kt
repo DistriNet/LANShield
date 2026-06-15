@@ -3,6 +3,7 @@ package org.distrinet.lanshield.backendsync
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.os.Process.INVALID_UID
+import android.util.Log
 import android.system.OsConstants.IPPROTO_TCP
 import android.system.OsConstants.IPPROTO_UDP
 import kotlinx.coroutines.Dispatchers
@@ -20,29 +21,31 @@ suspend fun findOpenPorts(
     pm: PackageManager,
     connectivityManager: ConnectivityManager
 ): List<OpenPorts> = withContext(Dispatchers.Default) {
-    coroutineScope {
-        val wildcardIpv4 = InetSocketAddress("0.0.0.0", 0)
-        val wildcardIpv6 = InetSocketAddress("::", 0)
+    val openPortsByUid = ConcurrentHashMap<Int, OpenPorts>()
+    try {
+        coroutineScope {
+            val wildcardIpv4 = InetSocketAddress("0.0.0.0", 0)
+            val wildcardIpv6 = InetSocketAddress("::", 0)
 
-        val openPortsByUid = ConcurrentHashMap<Int, OpenPorts>()
-
-        val jobs = (1..65535).map { port ->
-            launch {
-                checkPort(
-                    port,
-                    connectivityManager,
-                    pm,
-                    openPortsByUid,
-                    wildcardIpv4,
-                    wildcardIpv6
-                )
+            val jobs = (1..65535).map { port ->
+                launch {
+                    checkPort(
+                        port,
+                        connectivityManager,
+                        pm,
+                        openPortsByUid,
+                        wildcardIpv4,
+                        wildcardIpv6
+                    )
+                }
             }
+
+            jobs.joinAll()
         }
-
-        jobs.joinAll()
-
-        openPortsByUid.values.sorted()
+    } catch (e: SecurityException) {
+        Log.w("OpenPortsFinder", "No longer the active VPN; aborting open-port scan", e)
     }
+    openPortsByUid.values.sorted()
 }
 
 
