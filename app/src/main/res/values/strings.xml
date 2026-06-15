@@ -58,6 +58,8 @@
     <string name="lan_traffic_from_with_package_name">LAN traffic from %1$s</string>
     <string name="lan_traffic_info">Here you can see an overview of all apps that have sent or received LAN traffic. In some cases, LANShield is not able to detect which app caused certain packets to be sent; these are categorized under \'Unknown\'.</string>
     <string name="lanshield_enabled">LANShield enabled</string>
+    <string name="lanshield_start_failed_title">Couldn\'t start LANShield</string>
+    <string name="lanshield_start_failed_text">The LAN firewall could not be started. Please try again.</string>
     <string name="lanshield_lets_you_control_lan_access_of_other_apps">LANShield lets you control\nLAN access of other apps</string>
     <string name="lanshield_logo">LANShield logo</string>
     <string name="last_24h_with_bytes">Last 24h: %1$s</string>
