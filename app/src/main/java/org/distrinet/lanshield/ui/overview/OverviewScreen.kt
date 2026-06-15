@@ -188,14 +188,15 @@ internal fun OverviewScreen(
                 textAlign = TextAlign.Center
             )
             val uriHandler = LocalUriHandler.current
+            val learnMoreContentDescription =
+                stringResource(R.string.learn_more_on_lanshield_eu_opens_in_browser)
             Button(
                 onClick = { uriHandler.openUri(STUDY_MORE_INFO_URL) },
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .padding(vertical = 8.dp)
                     .semantics {
-                        contentDescription =
-                            context.getString(R.string.learn_more_on_lanshield_eu_opens_in_browser)
+                        contentDescription = learnMoreContentDescription
                     }
             ) {
                 Text(
@@ -218,13 +219,14 @@ internal fun OverviewScreen(
 //                    ) {
 //                        Text(stringResource(id = R.string.enable_always_on), textAlign = TextAlign.Center)
 //                    }
+                    val vpnNotificationContentDescription =
+                        stringResource(R.string.why_is_there_a_vpn_notification_opens_explanation_dialog)
                     Button(
                         onClick = { shouldShowVPNPermissionInfoDialog.value = true },
                         modifier = Modifier
                             .padding(bottom = 16.dp)
                             .semantics {
-                                contentDescription =
-                                    context.getString(R.string.why_is_there_a_vpn_notification_opens_explanation_dialog)
+                                contentDescription = vpnNotificationContentDescription
                             }
                     ) {
                         Text("Why is there a VPN notification?", textAlign = TextAlign.Center)
