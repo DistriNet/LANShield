@@ -93,10 +93,12 @@ public class Session {
 	
 	//indicate data from client is ready for sending to destination
 	private volatile boolean isDataForSendingReady = false;
-	
-	//store data for retransmission
-	private byte[] unackData = null;
-	
+
+	//client-direction TCP flow control (download path)
+	private long clientWindow = 0;          // advertised receive window, scaled to bytes
+	private int clientWindowScale = 0;       // window scale from the client SYN (RFC 7323)
+	private boolean upstreamEof = false;     // upstream hit EOF; FIN deferred until staging drains
+
 	//in ACK packet from client, if the previous packet was corrupted, client will send flag in options field
 	private boolean packetCorrupted = false;
 	
@@ -171,9 +173,21 @@ public class Session {
 	 * buffer has more data for vpn client
 	 * @return boolean
 	 */
-	public boolean hasReceivedData(){
+	public synchronized boolean hasReceivedData(){
 		return receivingStream.size() > 0;
 	}
+
+	public synchronized int receivingStreamSize(){
+		return receivingStream.size();
+	}
+
+	public synchronized long getClientWindow(){ return clientWindow; }
+	public synchronized void setClientWindow(long clientWindow){ this.clientWindow = clientWindow; }
+	public synchronized int getClientWindowScale(){ return clientWindowScale; }
+	public synchronized void setClientWindowScale(int clientWindowScale){ this.clientWindowScale = clientWindowScale; }
+
+	public synchronized boolean isUpstreamEof(){ return upstreamEof; }
+	public synchronized void setUpstreamEof(boolean upstreamEof){ this.upstreamEof = upstreamEof; }
 
 	/**
 	 * set data to be sent to destination server.
@@ -245,7 +259,7 @@ public class Session {
 		return destPort;
 	}
 
-	long getSendUnack() {
+	public long getSendUnack() {
 		return sendUnack;
 	}
 
@@ -342,10 +356,6 @@ public class Session {
 	public void setDataForSendingReady(boolean isDataForSendingReady) {
 		this.isDataForSendingReady = isDataForSendingReady;
 	}
-	public void setUnackData(byte[] unackData) {
-		this.unackData = unackData;
-	}
-	
 	void setPacketCorrupted(boolean packetCorrupted) {
 		this.packetCorrupted = packetCorrupted;
 	}

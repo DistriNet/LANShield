@@ -37,6 +37,10 @@ class SocketChannelReader {
 		this.writer = writer;
 	}
 
+	// When staged-but-unsent upstream bytes reach this, stop reading so the upstream TCP window
+	// closes and the sender backs off, instead of pulling a multi-GB download into memory.
+	private static final int STAGING_CAP = 2 * DataConst.MAX_RECEIVE_BUFFER_SIZE;
+
 	public long read(Session session) {
 		AbstractSelectableChannel channel = session.getChannel();
 		long bytesRead = 0;
@@ -48,8 +52,11 @@ class SocketChannelReader {
 			return 0;
 		}
 
-		// Resubscribe to reads, so that we're triggered again if more data arrives later.
-		session.subscribeKey(SelectionKey.OP_READ);
+		// Resubscribe to reads, unless backpressure is holding us off (staging full): pumpToClient
+		// re-subscribes once it drains below the cap.
+		if (!(channel instanceof SocketChannel) || session.receivingStreamSize() < STAGING_CAP) {
+			session.subscribeKey(SelectionKey.OP_READ);
+		}
 
 		if (session.isAbortingConnection()) {
 			Log.d(TAG,"removing aborted connection -> "+ session);
@@ -90,16 +97,21 @@ class SocketChannelReader {
 
 		try {
 			do {
+				// Backpressure: stop reading once the staging buffer is full.
+				if (session.receivingStreamSize() >= STAGING_CAP) {
+					session.unsubscribeKey(SelectionKey.OP_READ);
+					break;
+				}
 				len = channel.read(buffer);
 				if (len > 0) { //-1 mean it reach the end of stream
 					sendToRequester(buffer, len, session);
 					buffer.clear();
 					bytesRead += len;
 				} else if (len == -1) {
-					Log.d(TAG,"End of data from remote server, will send FIN to client");
-					Log.d(TAG,"send FIN to: " + session);
-					sendFin(session);
-					session.setAbortingConnection(true);
+					// EOF: defer the FIN to pumpToClient so it can't overtake unsent staged data.
+					Log.d(TAG,"End of data from remote server, will FIN once drained: " + session);
+					session.setUpstreamEof(true);
+					pumpToClient(session);
 				}
 			} while (len > 0);
 		}catch(NotYetConnectedException e){
@@ -126,46 +138,61 @@ class SocketChannelReader {
 		byte[] data = new byte[dataSize];
 		System.arraycopy(buffer.array(), 0, data, 0, dataSize);
 		session.addReceivedData(data);
-		//pushing all data to vpn client
-		while(session.hasReceivedData()){
-			pushDataToClient(session);
-		}
+		pumpToClient(session);
 	}
-	/**
-	 * create packet data and send it to VPN client
-	 * @param session Session
-	 */
-	private void pushDataToClient(@NonNull Session session){
-		if (!session.hasReceivedData()) {
-			//no data to send
-			Log.d(TAG,"no data for vpn client");
-		}
 
+	private int maxSegment(@NonNull Session session){
+		// TODO What does 60 mean? Leaves room for IP + TCP options below the MSS.
+		int max = session.getMaxSegmentSize() - 60;
+		return max < 1 ? 1024 : max;
+	}
+
+	/**
+	 * Send staged upstream data to the VPN client, keeping at most one client window in flight
+	 * (clientWindow - (sendNext - sendUnack) bytes). Runs under the session monitor, from the NIO
+	 * thread after a read and from the SessionHandler thread after a window-opening ACK. Sends the
+	 * deferred FIN once the upstream is done and all staged data has drained. Sequence math is
+	 * unsigned 32-bit so a multi-GB transfer (which wraps the sequence number) stays correct.
+	 */
+	void pumpToClient(@NonNull Session session){
 		IPHeader ipHeader = session.getLastIpHeader();
 		TCPHeader tcpheader = session.getLastTcpHeader();
-		// TODO What does 60 mean?
-		int max = session.getMaxSegmentSize() - 60;
+		if (ipHeader == null || tcpheader == null) return;
 
-		if(max < 1) {
-			max = 1024;
+		final int segMax = maxSegment(session);
+
+		while (session.hasReceivedData()) {
+			long inFlight = unsigned32(session.getSendNext() - session.getSendUnack());
+			long room = session.getClientWindow() - inFlight;
+			if (room <= 0) break;                                // window full (or zero window)
+			int chunk = (int) Math.min(room, segMax);
+
+			byte[] packetBody = session.getReceivedData(chunk);
+			if (packetBody == null || packetBody.length == 0) break;
+
+			long seq = unsigned32(session.getSendNext());
+			session.setSendNext(session.getSendNext() + packetBody.length);
+
+			boolean psh = session.hasReceivedLastSegment() && !session.hasReceivedData();
+			writer.write(TCPPacketFactory.createResponsePacketData(ipHeader, tcpheader, packetBody,
+					psh, session.getRecSequence(), seq,
+					session.getTimestampSender(), session.getTimestampReplyto()));
 		}
 
-		byte[] packetBody = session.getReceivedData(max);
-		if(packetBody != null && packetBody.length > 0) {
-			long unAck = session.getSendNext();
-			long nextUnAck = session.getSendNext() + packetBody.length;
-			session.setSendNext(nextUnAck);
-			//we need this data later on for retransmission
-			session.setUnackData(packetBody);
-			session.setResendPacketCounter(0);
-
-			byte[] data = TCPPacketFactory.createResponsePacketData(ipHeader,
-					tcpheader, packetBody, session.hasReceivedLastSegment(),
-					session.getRecSequence(), unAck,
-					session.getTimestampSender(), session.getTimestampReplyto());
-
-			writer.write(data);
+		if (session.isUpstreamEof() && !session.hasReceivedData() && !session.isAbortingConnection()) {
+			sendFin(session);
+			session.setAbortingConnection(true);
+			return;
 		}
+
+		// Resume upstream reads if backpressure stopped them and staging has drained.
+		if (!session.isUpstreamEof() && session.receivingStreamSize() < STAGING_CAP) {
+			session.subscribeKey(SelectionKey.OP_READ);
+		}
+	}
+
+	private static long unsigned32(long value){
+		return value & 0xFFFFFFFFL;
 	}
 	private void sendFin(Session session){
 		final IPHeader ipHeader = session.getLastIpHeader();
