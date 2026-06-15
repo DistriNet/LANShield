@@ -1,0 +1,21 @@
+import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.plugins.ExtensionAware
+
+apply(plugin = "com.google.gms.google-services")
+apply(plugin = "com.google.firebase.crashlytics")
+
+dependencies {
+    "playStoreImplementation"(platform("com.google.firebase:firebase-bom:34.14.1"))
+    "playStoreImplementation"("com.google.firebase:firebase-analytics")
+    "playStoreImplementation"("com.google.firebase:firebase-crashlytics")
+    "playStoreImplementation"("com.google.firebase:firebase-crashlytics-ndk")
+}
+
+val androidExt = extensions.getByName("android")
+val buildTypes = androidExt.javaClass.getMethod("getBuildTypes").invoke(androidExt)
+        as NamedDomainObjectContainer<*>
+val releaseBuildType = buildTypes.getByName("release") as ExtensionAware
+val crashlytics = releaseBuildType.extensions.getByName("firebaseCrashlytics")
+crashlytics.javaClass
+    .getMethod("setNativeSymbolUploadEnabled", Boolean::class.javaObjectType)
+    .invoke(crashlytics, true)
