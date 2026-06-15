@@ -70,6 +70,67 @@ class SessionManagerUnitTest {
     }
 
     @Test
+    fun `recreating the same tcp session is deduplicated and inserts only one flow`() {
+        // Two SYNs for the same 5-tuple (e.g. a retransmitted SYN) must map to one connection.
+        val server = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+        try {
+            val port = server.localPort
+            val first = manager.createNewTCPSession(dstIp, port, srcIp, 50000, 40, "pkg")
+            val second = manager.createNewTCPSession(dstIp, port, srcIp, 50000, 40, "pkg")
+
+            assertThat(second).isSameInstanceAs(first)
+            assertThat(db.FlowDao().countNotSyncedFlows()).isEqualTo(1)
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
+    fun `udp and tcp with the same tuple are tracked as separate connections`() {
+        // Protocol is part of the connection identity: identical addresses/ports over UDP and
+        // TCP must not collide into one session.
+        val server = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+        try {
+            val port = server.localPort
+            val udp = manager.createNewUDPSession(
+                dstIp, port, srcIp, 50000, 28, "pkg",
+                ByteBuffer.wrap(TestPackets.udpPacket("10.0.0.2", 50000, "127.0.0.1", port, "x".toByteArray())),
+            )
+            val tcp = manager.createNewTCPSession(dstIp, port, srcIp, 50000, 40, "pkg")
+
+            assertThat(tcp).isNotSameInstanceAs(udp)
+            assertThat(tcp.sessionKey).isNotEqualTo(udp.sessionKey)
+            assertThat(manager.getSession(SessionProtocol.UDP, dstIp, port, srcIp, 50000))
+                .isSameInstanceAs(udp)
+            assertThat(manager.getSession(SessionProtocol.TCP, dstIp, port, srcIp, 50000))
+                .isSameInstanceAs(tcp)
+            assertThat(db.FlowDao().countNotSyncedFlows()).isEqualTo(2)
+        } finally {
+            server.close()
+        }
+    }
+
+    @Test
+    fun `sessions are keyed by the full 5-tuple`() {
+        // Same client to the same peer but a different source port, or to a different peer port,
+        // are distinct connections, each independently retrievable and recorded.
+        val base = createUdp(srcPort = 50000, dstPort = 9999)
+        val differentSrcPort = createUdp(srcPort = 50001, dstPort = 9999)
+        val differentDstPort = createUdp(srcPort = 50000, dstPort = 8888)
+
+        assertThat(differentSrcPort).isNotSameInstanceAs(base)
+        assertThat(differentDstPort).isNotSameInstanceAs(base)
+        assertThat(db.FlowDao().countNotSyncedFlows()).isEqualTo(3)
+
+        assertThat(manager.getSession(SessionProtocol.UDP, dstIp, 9999, srcIp, 50000))
+            .isSameInstanceAs(base)
+        assertThat(manager.getSession(SessionProtocol.UDP, dstIp, 9999, srcIp, 50001))
+            .isSameInstanceAs(differentSrcPort)
+        assertThat(manager.getSession(SessionProtocol.UDP, dstIp, 8888, srcIp, 50000))
+            .isSameInstanceAs(differentDstPort)
+    }
+
+    @Test
     fun `closeSession removes the session and closes its channel`() {
         val session = createUdp()
         val key = session.sessionKey

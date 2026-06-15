@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.spi.AbstractSelectableChannel;
+import java.util.ArrayDeque;
 
 /**
  * store information about a socket connection from a VPN client.
@@ -73,8 +74,12 @@ public class Session {
 	//receiving buffer for storing data from remote host
 	private final ByteArrayOutputStream receivingStream;
 	
-	//sending buffer for storing data from vpn client to be send to destination host
+	//sending buffer for storing data from vpn client to be send to destination host (TCP only)
 	private final ByteArrayOutputStream sendingStream;
+
+	//queue of discrete datagrams to be sent to the destination host (UDP only). UDP must
+	//preserve datagram boundaries, so unlike TCP it cannot use a flat byte stream.
+	private final ArrayDeque<byte[]> sendingDatagrams = new ArrayDeque<>();
 	
 	private boolean hasReceivedLastSegment = false;
 	
@@ -171,13 +176,21 @@ public class Session {
 	}
 
 	/**
-	 * set data to be sent to destination server
+	 * set data to be sent to destination server.
+	 * For UDP each call is queued as a discrete datagram
+	 * For TCP the bytes are appended to the send stream.
 	 * @param data Data to be sent
-	 * @return boolean Success or not
+	 * @return int number of bytes accepted
 	 */
 	public synchronized int setSendingData(ByteBuffer data) {
 		final int remaining = data.remaining();
-		sendingStream.write(data.array(), data.position(), data.remaining());
+		if (protocol == SessionProtocol.UDP) {
+			byte[] datagram = new byte[remaining];
+			System.arraycopy(data.array(), data.position(), datagram, 0, remaining);
+			sendingDatagrams.addLast(datagram);
+		} else {
+			sendingStream.write(data.array(), data.position(), remaining);
+		}
 		return remaining;
 	}
 
@@ -186,7 +199,7 @@ public class Session {
 	}
 
 	/**
-	 * dequeue data for sending to server
+	 * dequeue all stream data for sending to the server (TCP).
 	 * @return byte[]
 	 */
 	public synchronized byte[] getSendingData(){
@@ -194,12 +207,30 @@ public class Session {
 		sendingStream.reset();
 		return data;
 	}
+
+	/**
+	 * dequeue the next datagram for sending to the server (UDP), or null if none remain.
+	 * @return byte[]
+	 */
+	public synchronized byte[] pollSendingDatagram(){
+		return sendingDatagrams.pollFirst();
+	}
+
+	/**
+	 * return a datagram to the head of the queue when it could not be written yet (UDP).
+	 */
+	public synchronized void requeueSendingDatagram(byte[] datagram){
+		sendingDatagrams.addFirst(datagram);
+	}
+
 	/**
 	 * buffer contains data for sending to destination server
 	 * @return boolean
 	 */
-	public boolean hasDataToSend(){
-		return sendingStream.size() > 0;
+	public synchronized boolean hasDataToSend(){
+		return protocol == SessionProtocol.UDP
+				? !sendingDatagrams.isEmpty()
+				: sendingStream.size() > 0;
 	}
 
 	public SessionProtocol getProtocol() {
