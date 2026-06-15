@@ -34,6 +34,11 @@ class OpenPortsViewModel @Inject constructor(
 
 
     fun refreshOpenPorts(context: Context) {
+        if (vpnServiceStatus.value != VPN_SERVICE_STATUS.ENABLED) {
+            _appsWithPorts.value = emptyList()
+            _isRefreshing.value = false
+            return
+        }
         _isRefreshing.value = true
         viewModelScope.launch(Dispatchers.Default) {
             val openPorts = findOpenPorts(
