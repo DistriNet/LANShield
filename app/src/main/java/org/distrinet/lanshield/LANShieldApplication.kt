@@ -18,6 +18,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.work.Configuration
 import dagger.Module
 import dagger.Provides
+import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -234,6 +235,15 @@ class LANShieldApplication : Application(), Configuration.Provider {
             .build()
 }
 
+
+/**
+ * Exposes the VPN status for testing.
+ */
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface VpnStatusEntryPoint {
+    fun vpnServiceStatus(): MutableLiveData<VPN_SERVICE_STATUS>
+}
 
 @Module
 @InstallIn(SingletonComponent::class)

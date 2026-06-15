@@ -124,31 +124,29 @@ class VPNService : VpnService(), IProtectSocket {
 
         updateAlwaysOnStatus()
 
-        intent?.let {
-            when (it.action) {
-                STOP_VPN_SERVICE -> {
-                    if (isVPNRunning()) {
-                        stopVPNThread()
-                        stopForeground(STOP_FOREGROUND_REMOVE)
-                    }
-                }
-
-                else -> {
-                    if (!isVPNRunning()) {
-                        LANShieldNotificationManager(this).createNotificationChannels()
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                            startForeground(
-                                1,
-                                createNotification(),
-                                FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
-                            )
-                        } else {
-                            startForeground(1, createNotification())
-                        }
-                        startVPNThread()
-                    }
-                }
+        // Only the explicit STOP action stops the VPN. Everything else — including a null intent,
+        // which the OS re-delivers when START_STICKY restarts the process after a kill, and when
+        // Android's always-on VPN restarts us — is treated as a start request, so the tunnel is
+        // always re-established instead of silently staying down with the UI switch showing DISABLED.
+        if (intent?.action == STOP_VPN_SERVICE) {
+            if (isVPNRunning()) {
+                stopVPNThread()
+                stopForeground(STOP_FOREGROUND_REMOVE)
             }
+            // Fully tear down so START_STICKY won't resurrect a VPN the user explicitly stopped.
+            stopSelf()
+        } else if (!isVPNRunning()) {
+            LANShieldNotificationManager(this).createNotificationChannels()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    1,
+                    createNotification(),
+                    FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED
+                )
+            } else {
+                startForeground(1, createNotification())
+            }
+            startVPNThread()
         }
 
         // Return the appropriate service restart behavior
@@ -159,6 +157,8 @@ class VPNService : VpnService(), IProtectSocket {
         super.onRevoke()
         stopVPNThread()
         stopForeground(STOP_FOREGROUND_REMOVE)
+        // Permission was revoked (e.g. another VPN took over); don't let START_STICKY restart us.
+        stopSelf()
     }
 
     override fun onDestroy() {
