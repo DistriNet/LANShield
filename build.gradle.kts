@@ -6,5 +6,5 @@ plugins {
     id("com.google.dagger.hilt.android") version "2.59.2" apply false
 
 //    id("com.google.gms.go[DELETEME]ogle-services") version "4.4.4" apply false
-//    id("com.google.fire[DELETEME]base.crashlytics") version "3.0.6" apply false
+//    id("com.google.fire[DELETEME]base.crashlytics") version "3.0.7" apply false
 }
