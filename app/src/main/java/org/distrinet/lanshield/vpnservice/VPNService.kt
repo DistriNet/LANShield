@@ -42,6 +42,7 @@ import tech.httptoolkit.android.vpn.socket.IProtectSocket
 import tech.httptoolkit.android.vpn.socket.SocketProtector
 import java.net.InetAddress
 import java.net.NetworkInterface
+import java.net.SocketException
 import javax.inject.Inject
 
 /* The IP address of the virtual network interface */
@@ -305,20 +306,32 @@ class VPNService : VpnService(), IProtectSocket {
         // that are always installed. See how other VPNs do this and for starting points see:
         // - https://stackoverflow.com/questions/6169059/android-event-for-internet-connectivity-state-change
         // - https://medium.com/@veniamin.vynohradov/monitoring-internet-connection-state-in-android-da7ad915b5e5
-        for (networkInterface in NetworkInterface.getNetworkInterfaces()) {
-            if (networkInterface.isLoopback) continue
+        val interfaces = try {
+            NetworkInterface.getNetworkInterfaces() ?: return
+        } catch (e: SocketException) {
+            Log.w(TAG, "Could not enumerate network interfaces", e)
+            return
+        }
 
-            for (address in networkInterface.interfaceAddresses) {
-                if (address.address.isAnyLocalAddress or
-                    address.address.isLinkLocalAddress or
-                    address.address.isSiteLocalAddress
-                ) continue
-                val networkAddress = getNetworkAddress(address.address, address.networkPrefixLength)
-                builder.addRoute(networkAddress, address.networkPrefixLength.toInt())
-                Log.d(
-                    TAG,
-                    "Also monitoring " + networkAddress.toString() + "/" + address.networkPrefixLength.toString()
-                )
+        for (networkInterface in interfaces) {
+            try {
+                if (networkInterface.isLoopback) continue
+
+                for (address in networkInterface.interfaceAddresses) {
+                    if (address.address.isAnyLocalAddress or
+                        address.address.isLinkLocalAddress or
+                        address.address.isSiteLocalAddress
+                    ) continue
+                    val networkAddress = getNetworkAddress(address.address, address.networkPrefixLength)
+                    builder.addRoute(networkAddress, address.networkPrefixLength.toInt())
+                    Log.d(
+                        TAG,
+                        "Also monitoring " + networkAddress.toString() + "/" + address.networkPrefixLength.toString()
+                    )
+                }
+            } catch (e: SocketException) {
+                // Interface disappeared between enumeration and query (ENODEV) — skip it.
+                Log.w(TAG, "Skipping interface ${networkInterface.name}: ${e.message}")
             }
         }
     }
