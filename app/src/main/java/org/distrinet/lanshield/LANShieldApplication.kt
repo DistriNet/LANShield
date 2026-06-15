@@ -79,8 +79,8 @@ val TIME_OF_LAST_SYNC = longPreferencesKey("time_of_last_sync")
 
 val ALLOW_MULTICAST = booleanPreferencesKey("allow_multicast")
 val ALLOW_DNS = booleanPreferencesKey("allow_dns")
-val HIDE_MULTICAST_NOT = booleanPreferencesKey("hide_multicast_not")
-val HIDE_DNS_NOT = booleanPreferencesKey("hide_dns_not")
+val HIDE_MULTICAST_NOTIFICATIONS = booleanPreferencesKey("hide_multicast_not")
+val HIDE_DNS_NOTIFICATIONS = booleanPreferencesKey("hide_dns_not")
 
 val AUTOSTART_ENABLED = booleanPreferencesKey("autostart_enabled")
 

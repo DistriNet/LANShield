@@ -76,6 +76,12 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true   // required by Robolectric
+            isReturnDefaultValues = true       // android.* stubs return defaults instead of throwing
+        }
+    }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.15"
     }
@@ -127,11 +133,12 @@ dependencies {
     implementation(libs.androidx.hilt.common)
     implementation(libs.androidx.hilt.work)
     implementation(libs.okhttp)
-    testImplementation(libs.junit)
+    testImplementation(libs.bundles.unit.test)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.core)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.hilt.navigation.compose)
