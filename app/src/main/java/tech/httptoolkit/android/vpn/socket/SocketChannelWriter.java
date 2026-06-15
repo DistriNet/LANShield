@@ -80,7 +80,7 @@ public class SocketChannelWriter {
 	private long writeUDP(Session session) {
 		long amountBytes = 0;
 		try {
-			amountBytes = writePendingData(session);
+			amountBytes = writePendingUDPData(session);
 			Date dt = new Date();
 			session.connectionStartTime = dt.getTime();
 		}catch(NotYetConnectedException ex2){
@@ -117,11 +117,12 @@ public class SocketChannelWriter {
 		return amountBytes;
 	}
 
+	/** TCP: a byte stream, so buffered bytes are concatenated and written as-is. */
 	private long writePendingData(Session session) throws IOException {
 		if (!session.hasDataToSend()) return 0;
 
 		long totalBytesWritten = 0;
-		AbstractSelectableChannel channel = session.getChannel();
+		SocketChannel channel = (SocketChannel) session.getChannel();
 
 		byte[] data = session.getSendingData();
 		ByteBuffer buffer = ByteBuffer.allocate(data.length);
@@ -129,9 +130,7 @@ public class SocketChannelWriter {
 		buffer.flip();
 
 		while (buffer.hasRemaining()) {
-			int bytesWritten = channel instanceof SocketChannel
-				? ((SocketChannel) channel).write(buffer)
-				: ((DatagramChannel) channel).write(buffer);
+			int bytesWritten = channel.write(buffer);
 
 			if (bytesWritten == 0) {
 				break;
@@ -149,7 +148,7 @@ public class SocketChannelWriter {
 			// Subscribe to WRITE events, so we know when this is ready to resume.
 			session.subscribeKey(SelectionKey.OP_WRITE);
 		} else {
-			// All done, all good -> wait until the next TCP PSH / UDP packet
+			// All done, all good -> wait until the next TCP PSH packet
 			session.setDataForSendingReady(false);
 
 			// We don't need to know about WRITE events any more, we've written all our data.
@@ -157,5 +156,40 @@ public class SocketChannelWriter {
 			session.unsubscribeKey(SelectionKey.OP_WRITE);
 		}
 		return totalBytesWritten;
+	}
+
+	/**
+	 * UDP: a datagram protocol, so each queued datagram must be written with its own
+	 * channel.write() to preserve message boundaries. We send one datagram per write cycle
+	 * and resubscribe to OP_WRITE while more remain, mirroring the TCP backpressure pattern.
+	 */
+	private long writePendingUDPData(Session session) throws IOException {
+		byte[] datagram = session.pollSendingDatagram();
+		if (datagram == null) {
+			session.setDataForSendingReady(false);
+			session.unsubscribeKey(SelectionKey.OP_WRITE);
+			return 0;
+		}
+
+		DatagramChannel channel = (DatagramChannel) session.getChannel();
+		// A connected non-blocking DatagramChannel writes the whole datagram or nothing
+		// (0 when the send buffer is full); it never sends a partial datagram.
+		int bytesWritten = channel.write(ByteBuffer.wrap(datagram));
+
+		if (bytesWritten == 0) {
+			// Not ready yet: put the datagram back and resume on the next OP_WRITE.
+			session.requeueSendingDatagram(datagram);
+			session.subscribeKey(SelectionKey.OP_WRITE);
+			return 0;
+		}
+
+		if (session.hasDataToSend()) {
+			// More datagrams queued -> come back for the next one.
+			session.subscribeKey(SelectionKey.OP_WRITE);
+		} else {
+			session.setDataForSendingReady(false);
+			session.unsubscribeKey(SelectionKey.OP_WRITE);
+		}
+		return bytesWritten;
 	}
 }
