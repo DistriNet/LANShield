@@ -1,5 +1,6 @@
 package org.distrinet.lanshield.database.model
 
+import android.util.JsonWriter
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import androidx.room.TypeConverters
@@ -69,6 +70,34 @@ data class LANFlow(
         }
 
         return json
+    }
+
+    /** Streaming equivalent of [toJSON]: writes this flow straight to [writer] (see BackendApi). */
+    fun writeJson(writer: JsonWriter) {
+        writer.beginObject()
+        writer.name("flow_uuid").value(uuid.toString())
+        writer.name("app_id").value(appId ?: PACKAGE_NAME_UNKNOWN)
+        writer.name("time_start").value(convertMillisToRFC8601(timeStart))
+        writer.name("time_end").value(convertMillisToRFC8601(timeEnd))
+        writer.name("remote_ip").value(remoteEndpoint.toString().removePrefix("/"))
+        writer.name("remote_port").value(remoteEndpoint.port.toLong())
+        writer.name("local_ip").value(localEndpoint.toString().removePrefix("/"))
+        writer.name("local_port").value(localEndpoint.port.toLong())
+        writer.name("transport_layer_protocol").value(transportLayerProtocol)
+        writer.name("packet_count_egress").value(packetCountEgress)
+        writer.name("data_egress").value(dataEgress)
+        writer.name("packet_count_ingress").value(packetCountIngress)
+        writer.name("data_ingress").value(dataIngress)
+        writer.name("detected_protocols").value(protocols.joinToString(","))
+        writer.name("time_end_at_last_sync").value(timeEndAtLastSync)
+        writer.name("dpi_report").value(dpiReport ?: "{}")
+        writer.name("dpi_protocol").value(dpiProtocol ?: "")
+
+        if (transportLayerProtocol.contentEquals("TCP")) {
+            writer.name("tcp_established_reached").value(tcpEstablishedReached)
+        }
+
+        writer.endObject()
     }
 
     fun increaseEgress(amountPackets: Long, amountBytes: Long) {

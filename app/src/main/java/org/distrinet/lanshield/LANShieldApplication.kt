@@ -13,11 +13,9 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import androidx.hilt.work.HiltWorkerFactory
 import androidx.lifecycle.MutableLiveData
 import androidx.work.Configuration
-import androidx.work.ListenableWorker
-import androidx.work.WorkerFactory
-import androidx.work.WorkerParameters
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,8 +23,6 @@ import dagger.hilt.android.HiltAndroidApp
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import org.distrinet.lanshield.backendsync.AppUsageStats
-import org.distrinet.lanshield.backendsync.OpenPortsWorker
-import org.distrinet.lanshield.backendsync.SendToServerWorkerr
 import org.distrinet.lanshield.database.AppDatabase
 import org.distrinet.lanshield.database.dao.FlowDao
 import org.distrinet.lanshield.database.dao.LANShieldSessionDao
@@ -229,49 +225,13 @@ fun isAppUsageAccessGranted(context: Context): Boolean {
 @HiltAndroidApp
 class LANShieldApplication : Application(), Configuration.Provider {
     @Inject
-    lateinit var workerFactory: LANShieldWorkerFactory
+    lateinit var workerFactory: HiltWorkerFactory
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
             .setWorkerFactory(workerFactory)
             .setMinimumLoggingLevel(Log.DEBUG)
             .build()
-}
-
-class LANShieldWorkerFactory @Inject constructor(
-    private val flowDao: FlowDao,
-    private val lanAccessPolicyDao: LanAccessPolicyDao,
-    private val lanShieldSessionDao: LANShieldSessionDao,
-    private val openPortsDao: OpenPortsDao,
-    private val dataStore: DataStore<Preferences>,
-    private val vpnServiceStatus: MutableLiveData<VPN_SERVICE_STATUS>
-) : WorkerFactory() {
-    override fun createWorker(
-        appContext: Context,
-        workerClassName: String,
-        workerParameters: WorkerParameters
-    ): ListenableWorker? {
-        return when (workerClassName) {
-            OpenPortsWorker::class.qualifiedName -> OpenPortsWorker(
-                appContext = appContext,
-                workerParams = workerParameters,
-                openPortsDao = openPortsDao,
-                vpnServiceStatus = vpnServiceStatus
-            )
-
-            SendToServerWorkerr::class.qualifiedName -> SendToServerWorkerr(
-                context = appContext,
-                params = workerParameters,
-                flowDao = flowDao,
-                lanAccessPolicyDao = lanAccessPolicyDao,
-                lanShieldSessionDao = lanShieldSessionDao,
-                openPortsDao = openPortsDao,
-                dataStore = dataStore
-            )
-
-            else -> null
-        }
-    }
 }
 
 
