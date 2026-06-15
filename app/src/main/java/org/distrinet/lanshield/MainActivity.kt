@@ -1,15 +1,22 @@
 package org.distrinet.lanshield
 
+import android.Manifest
+import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.net.VpnService
+import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.datastore.core.DataStore
@@ -50,6 +57,7 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var vpnServiceActionRequest: MutableLiveData<VPN_SERVICE_ACTION>
     private lateinit var vpnPermissionLauncher: ActivityResultLauncher<Intent>
+    private lateinit var notificationPermissionLauncher: ActivityResultLauncher<String>
 
     @Inject
     lateinit var dataStore: DataStore<Preferences>
@@ -62,6 +70,16 @@ class MainActivity : ComponentActivity() {
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
                 if (result.resultCode == RESULT_OK) {
                     startService(Intent(this, VPNService::class.java))
+                }
+            }
+
+        notificationPermissionLauncher =
+            registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+                if (granted) {
+                    // Permission obtained; continue the enable flow that was paused to ask for it.
+                    proceedStartVPNService()
+                } else {
+                    onNotificationPermissionDenied()
                 }
             }
 
@@ -198,6 +216,17 @@ class MainActivity : ComponentActivity() {
 
 
     private fun startVPNService() {
+        // Notification permission can be auto-revoked while the app is unused (and is only requested
+        // during onboarding otherwise), yet the foreground-service banner and the LAN-traffic
+        // allow/block prompts depend on it. Re-check on every enable and refuse to start without it.
+        if (!hasNotificationPermission()) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            return
+        }
+        proceedStartVPNService()
+    }
+
+    private fun proceedStartVPNService() {
         if (!hasVPNConsent()) {
             askVPNConsent()
         } else {
@@ -206,7 +235,36 @@ class MainActivity : ComponentActivity() {
             } catch (_: SecurityException) {
             }
         }
+    }
 
+    private fun hasNotificationPermission(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return true
+        return ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun onNotificationPermissionDenied() {
+        // The VPN is intentionally not started; the switch stays off because it tracks the service
+        // status. Tell the user why, and route to settings when the permission is permanently denied
+        // (the request dialog no longer appears), so they aren't left with a switch that does nothing.
+        Toast.makeText(this, R.string.notification_permission_required, Toast.LENGTH_LONG).show()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            !shouldShowRequestPermissionRationale(Manifest.permission.POST_NOTIFICATIONS)
+        ) {
+            openAppNotificationSettings()
+        }
+    }
+
+    private fun openAppNotificationSettings() {
+        val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+        }
+        try {
+            startActivity(intent)
+        } catch (_: ActivityNotFoundException) {
+        }
     }
 
     private fun stopVPNService() {

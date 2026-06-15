@@ -59,12 +59,15 @@ class VpnServiceStartCommandTest {
             assertEquals(VPN_SERVICE_STATUS.ENABLED, status.value)
 
             // 3. An explicit stop must actually stop it (and stopSelf so it is not resurrected).
-            context.startForegroundService(
+            //    Use startService for STOP, as production does: startForegroundService would create a
+            //    "must call startForeground" promise that the stop path never fulfills (it stops),
+            //    crashing the process.
+            context.startService(
                 Intent(context, VPNService::class.java).apply { action = VPNService.STOP_VPN_SERVICE }
             )
             awaitStatus(status, VPN_SERVICE_STATUS.DISABLED)
         } finally {
-            context.startForegroundService(
+            context.startService(
                 Intent(context, VPNService::class.java).apply { action = VPNService.STOP_VPN_SERVICE }
             )
         }
