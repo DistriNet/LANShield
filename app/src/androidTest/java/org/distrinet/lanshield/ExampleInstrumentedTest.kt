@@ -17,8 +17,9 @@ import org.junit.Assert.*
 class ExampleInstrumentedTest {
     @Test
     fun useAppContext() {
-        // Context of the app under test.
+        // Context of the app under test. Debug builds carry a ".debug" applicationIdSuffix, so match
+        // the base package name as a prefix rather than exactly.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("org.distrinet.lanshield", appContext.packageName)
+        assertTrue(appContext.packageName.startsWith("org.distrinet.lanshield"))
     }
 }

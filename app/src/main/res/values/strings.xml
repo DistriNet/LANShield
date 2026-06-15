@@ -108,6 +108,7 @@
     <string name="unknown">Unknown</string>
     <string name="vpn_notification">VPN notification</string>
     <string name="vpn_permission_request">VPN permission request</string>
+    <string name="notification_permission_required">LANShield needs notification permission to run. Enable notifications to turn it on.</string>
     <string name="you_re_all_set">You\'re all set!</string>
     <string name="export">Export LAN Traffic</string>
     <string name="advanced">Advanced</string>

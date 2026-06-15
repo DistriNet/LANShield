@@ -22,6 +22,9 @@ android {
         versionName = "0.95"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Run each instrumented test in its own process with cleared app data/permissions, so that
+        // permission-state changes in one test can't kill the shared process during another.
+        testInstrumentationRunnerArguments["clearPackageData"] = "true"
         vectorDrawables {
             useSupportLibrary = true
         }
@@ -77,6 +80,8 @@ android {
         buildConfig = true
     }
     testOptions {
+        // Isolate each instrumented test in its own process; pairs with clearPackageData above.
+        execution = "ANDROIDX_TEST_ORCHESTRATOR"
         unitTests {
             isIncludeAndroidResources = true   // required by Robolectric
             isReturnDefaultValues = true       // android.* stubs return defaults instead of throwing
@@ -139,6 +144,10 @@ dependencies {
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     androidTestImplementation(libs.androidx.test.core)
+    androidTestImplementation(libs.androidx.test.rules)
+    androidTestImplementation(libs.androidx.test.uiautomator)
+    androidTestUtil(libs.androidx.test.orchestrator)
+    androidTestUtil(libs.androidx.test.services)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation(libs.androidx.hilt.navigation.compose)

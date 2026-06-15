@@ -30,6 +30,10 @@ turbine = "1.2.1"
 androidxTestCore = "1.7.0"
 androidxArchCore = "2.2.0"
 truth = "1.4.5"
+uiautomator = "2.3.0"
+androidxTestRules = "1.7.0"
+testOrchestrator = "1.5.1"
+testServices = "1.5.0"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -74,6 +78,10 @@ androidx-core-testing = { module = "androidx.arch.core:core-testing", version.re
 androidx-test-core = { module = "androidx.test:core", version.ref = "androidxTestCore" }
 androidx-test-core-ktx = { module = "androidx.test:core-ktx", version.ref = "androidxTestCore" }
 truth = { module = "com.google.truth:truth", version.ref = "truth" }
+androidx-test-uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
+androidx-test-rules = { module = "androidx.test:rules", version.ref = "androidxTestRules" }
+androidx-test-orchestrator = { module = "androidx.test:orchestrator", version.ref = "testOrchestrator" }
+androidx-test-services = { module = "androidx.test.services:test-services", version.ref = "testServices" }
 
 [bundles]
 unit-test = [

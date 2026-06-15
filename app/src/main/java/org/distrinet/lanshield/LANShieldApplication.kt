@@ -243,6 +243,7 @@ class LANShieldApplication : Application(), Configuration.Provider {
 @InstallIn(SingletonComponent::class)
 interface VpnStatusEntryPoint {
     fun vpnServiceStatus(): MutableLiveData<VPN_SERVICE_STATUS>
+    fun vpnServiceActionRequest(): MutableLiveData<VPN_SERVICE_ACTION>
 }
 
 @Module
