@@ -15,8 +15,8 @@ import org.distrinet.lanshield.ALLOW_DNS
 import org.distrinet.lanshield.ALLOW_MULTICAST
 import org.distrinet.lanshield.AUTOSTART_ENABLED
 import org.distrinet.lanshield.DEFAULT_POLICY_KEY
-import org.distrinet.lanshield.HIDE_DNS_NOT
-import org.distrinet.lanshield.HIDE_MULTICAST_NOT
+import org.distrinet.lanshield.HIDE_DNS_NOTIFICATIONS
+import org.distrinet.lanshield.HIDE_MULTICAST_NOTIFICATIONS
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.SHARE_APP_USAGE_KEY
 import org.distrinet.lanshield.SHARE_LAN_METRICS_KEY
@@ -37,10 +37,10 @@ class SettingsViewModel @Inject constructor(val dataStore: DataStore<Preferences
 
     val allowDns = dataStore.data.map { it[ALLOW_DNS] ?: false }.distinctUntilChanged()
 
-    val hideMulticastNot =
-        dataStore.data.map { it[HIDE_MULTICAST_NOT] ?: false }.distinctUntilChanged()
+    val hideMulticastNotifications =
+        dataStore.data.map { it[HIDE_MULTICAST_NOTIFICATIONS] ?: false }.distinctUntilChanged()
 
-    val hideDnsNot = dataStore.data.map { it[HIDE_DNS_NOT] ?: false }.distinctUntilChanged()
+    val hideDnsNotifications = dataStore.data.map { it[HIDE_DNS_NOTIFICATIONS] ?: false }.distinctUntilChanged()
 
 
     val defaultPolicy =
@@ -91,11 +91,11 @@ class SettingsViewModel @Inject constructor(val dataStore: DataStore<Preferences
         writeToDataStore(ALLOW_DNS, enabled)
     }
 
-    fun onChangeHideMulticastNot(enabled: Boolean) {
-        writeToDataStore(HIDE_MULTICAST_NOT, enabled)
+    fun onChangeHideMulticastNotifications(enabled: Boolean) {
+        writeToDataStore(HIDE_MULTICAST_NOTIFICATIONS, enabled)
     }
 
-    fun onChangeHideDnsNot(enabled: Boolean) {
-        writeToDataStore(HIDE_DNS_NOT, enabled)
+    fun onChangeHideDnsNotifications(enabled: Boolean) {
+        writeToDataStore(HIDE_DNS_NOTIFICATIONS, enabled)
     }
 }

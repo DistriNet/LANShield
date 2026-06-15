@@ -91,8 +91,8 @@ internal fun SettingsRoute(
 
     val isAllowMulticastEnabled by viewModel.allowMulticast.collectAsStateWithLifecycle(false)
     val isAllowDnsEnabled by viewModel.allowDns.collectAsStateWithLifecycle(false)
-    val isHideMulticastNot by viewModel.hideMulticastNot.collectAsStateWithLifecycle(false)
-    val isHideDnsNot by viewModel.hideDnsNot.collectAsStateWithLifecycle(false)
+    val isHideMulticastNotifications by viewModel.hideMulticastNotifications.collectAsStateWithLifecycle(false)
+    val isHideDnsNotifications by viewModel.hideDnsNotifications.collectAsStateWithLifecycle(false)
 
 
     var showGrantAppUsageDialog by remember { mutableStateOf(false) }
@@ -129,10 +129,10 @@ internal fun SettingsRoute(
         onChangeAllowMulticast = { viewModel.onChangeAllowMulticast(it) },
         isAllowDnsEnabled = isAllowDnsEnabled,
         onChangeAllowDns = { viewModel.onChangeAllowDns(it) },
-        isHideMulticastNot = isHideMulticastNot,
-        onChangeMulticastNot = { viewModel.onChangeHideMulticastNot(it) },
-        isHideDnsNot = isHideDnsNot,
-        onChangeDnsNot = { viewModel.onChangeHideDnsNot(it) },
+        isHideMulticastNotifications = isHideMulticastNotifications,
+        onChangeMulticastNotifications = { viewModel.onChangeHideMulticastNotifications(it) },
+        isHideDnsNotifications = isHideDnsNotifications,
+        onChangeDnsNotifications = { viewModel.onChangeHideDnsNotifications(it) },
     )
 }
 
@@ -428,10 +428,10 @@ internal fun SettingsScreenPreview() {
         onChangeAllowMulticast = {},
         isAllowDnsEnabled = false,
         onChangeAllowDns = {},
-        isHideDnsNot = false,
-        onChangeDnsNot = {},
-        isHideMulticastNot = false,
-        onChangeMulticastNot = {}
+        isHideDnsNotifications = false,
+        onChangeDnsNotifications = {},
+        isHideMulticastNotifications = false,
+        onChangeMulticastNotifications = {}
     )
 }
 
@@ -456,10 +456,10 @@ internal fun SettingsScreen(
     onChangeAllowMulticast: (Boolean) -> Unit,
     isAllowDnsEnabled: Boolean,
     onChangeAllowDns: (Boolean) -> Unit,
-    isHideDnsNot: Boolean,
-    onChangeDnsNot: (Boolean) -> Unit,
-    isHideMulticastNot: Boolean,
-    onChangeMulticastNot: (Boolean) -> Unit,
+    isHideDnsNotifications: Boolean,
+    onChangeDnsNotifications: (Boolean) -> Unit,
+    isHideMulticastNotifications: Boolean,
+    onChangeMulticastNotifications: (Boolean) -> Unit,
 ) {
 
     var showLanBlockingMoreInfoDialog by remember { mutableStateOf(false) }
@@ -558,16 +558,16 @@ internal fun SettingsScreen(
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     SettingsSwitchComp(
                         name = R.string.hide_multicast_notification,
-                        isChecked = isHideMulticastNot,
-                        onCheckedChange = onChangeMulticastNot
+                        isChecked = isHideMulticastNotifications,
+                        onCheckedChange = onChangeMulticastNotifications
                     )
                 }
                 AnimatedVisibility(visible = defaultPolicy == Policy.ALLOW) {
                     HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                     SettingsSwitchComp(
                         name = R.string.hide_dns_notification,
-                        isChecked = isHideDnsNot,
-                        onCheckedChange = onChangeDnsNot
+                        isChecked = isHideDnsNotifications,
+                        onCheckedChange = onChangeDnsNotifications
                     )
                 }
             }

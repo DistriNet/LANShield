@@ -19,6 +19,7 @@ import org.distrinet.lanshield.Policy.ALLOW
 import org.distrinet.lanshield.Policy.BLOCK
 import org.distrinet.lanshield.Policy.DEFAULT
 import org.distrinet.lanshield.TAG
+import org.distrinet.lanshield.crashreport.crashReporter
 import org.distrinet.lanshield.database.AppDatabase
 import org.distrinet.lanshield.database.model.LANFlow
 import org.distrinet.lanshield.database.model.LanAccessPolicy
@@ -46,7 +47,15 @@ class VPNRunnable(
 
     companion object {
         init {
-            System.loadLibrary("lanshield-dpi")
+            try {
+                System.loadLibrary("lanshield-dpi")
+            } catch (e: Throwable) {
+                // If the native DPI library is unavailable, continue with DPI disabled
+                // rather than crashing the VPN service at class-load time. doDpi() handles
+                // the resulting UnsatisfiedLinkError on each call and returns null.
+                Log.e(TAG, "Failed to load lanshield-dpi native library: ${e.message}")
+                crashReporter.recordException(e)
+            }
         }
 
         private val dpiLock = Any()
@@ -71,7 +80,10 @@ class VPNRunnable(
                     } else {
                         null
                     }
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
+                    // Catch Throwable (not just Exception) so a native failure such as an
+                    // UnsatisfiedLinkError degrades DPI gracefully instead of propagating up
+                    // and tearing down the whole VPN packet loop.
                     Log.e(TAG, "Error during DPI: ${e.message}")
                     null
                 }
@@ -123,10 +135,10 @@ class VPNRunnable(
     private var allowDns = false
 
     @Volatile
-    private var hideMulticastNot = false
+    private var hideMulticastNotifications = false
 
     @Volatile
-    private var hideDnsNot = false
+    private var hideDnsNotifications = false
 
     @Synchronized
     fun setDefaultForwardPolicy(policy: Policy) {
@@ -159,8 +171,8 @@ class VPNRunnable(
     var systemAppsPolicyObserver = Observer<Policy> { setSystemAppsForwardPolicy(it) }
     var allowMulticastObserver = Observer<Boolean> { allowMulticast = it }
     var allowDnsObserver = Observer<Boolean> { allowDns = it }
-    var hideMulticastNotObserver = Observer<Boolean> { hideMulticastNot = it }
-    var hideDnsNotObserver = Observer<Boolean> { hideDnsNot = it }
+    var hideMulticastNotificationsObserver = Observer<Boolean> { hideMulticastNotifications = it }
+    var hideDnsNotificationsObserver = Observer<Boolean> { hideDnsNotifications = it }
 
 
     private fun logBlockedPacket(
@@ -225,10 +237,8 @@ class VPNRunnable(
                     try {
                         packetBuffer.limit(packetLength)
                         val packetHeader = IPHeader(packetBuffer)
-                        val (forwardPolicy, packageName) = shouldForwardPacket(packetHeader)
+                        val (shouldForward, packageName) = shouldForwardPacket(packetHeader)
 
-                        val shouldForward =
-                            (forwardPolicy == ALLOW) or (forwardPolicy == DEFAULT && defaultForwardPolicy == ALLOW)
                         packetBuffer.rewind()
                         if (shouldForward) {
                             httpToolkitSessionHandler.handlePacket(packetBuffer, packageName)
@@ -303,68 +313,52 @@ class VPNRunnable(
         return -1
     }
 
-    private fun shouldForwardPacket(packetHeader: IPHeader): Pair<Policy, String> {
+    private fun shouldForwardPacket(packetHeader: IPHeader): Pair<Boolean, String> {
 
         val transportLayerProtocol = packetHeader.protocolNumberAsOSConstant()
-        val canLookupAppUid = transportLayerProtocol == IPPROTO_TCP
+        val isTcpOrUdp = transportLayerProtocol == IPPROTO_TCP
                 || transportLayerProtocol == IPPROTO_UDP
-        if (!canLookupAppUid) {
-            // We can only lookup the app's uid for TCP and UDP packets.
-            // For other protocols we use the default policy.
-            return Pair(DEFAULT, PACKAGE_NAME_UNKNOWN)
+
+        // We can only look up the app's uid for TCP and UDP packets.
+        var appPackageName = PACKAGE_NAME_UNKNOWN
+        var perAppPolicy = DEFAULT
+        var isSystemApp = false
+        var hasValidUid = false
+        if (isTcpOrUdp) {
+            val appUid = getPacketOwnerUid(packetHeader)
+            hasValidUid = appUid != -1 && appUid != 1000 && appUid != 0
+            if (hasValidUid) {
+                appPackageName = getPackageNameFromUid(appUid, context.packageManager)
+                perAppPolicy = accessPoliciesCache.getOrDefault(appPackageName, DEFAULT)
+                isSystemApp = getPackageMetadata(appPackageName, context.packageManager).isSystem
+            }
         }
 
-        val appUid = getPacketOwnerUid(packetHeader)
-        val hasValidUid = appUid != -1 && appUid != 1000 && appUid != 0
-        val ipAddress = packetHeader.destination.address
+        val decision = PolicyEngine.decide(
+            PacketDecisionInput(
+                isTcpOrUdp = isTcpOrUdp,
+                hasValidUid = hasValidUid,
+                destAddress = packetHeader.destination.address,
+                destPort = packetHeader.destination.port,
+                perAppPolicy = perAppPolicy,
+                isSystemApp = isSystemApp,
+                defaultForwardPolicy = defaultForwardPolicy,
+                systemAppsForwardPolicy = systemAppsForwardPolicy,
+                allowMulticast = allowMulticast,
+                allowDns = allowDns,
+                hideDnsNotifications = hideDnsNotifications,
+                hideMulticastNotifications = hideMulticastNotifications,
+            )
+        )
 
-        if (hasValidUid) {
-            val appPackageName = getPackageNameFromUid(appUid, context.packageManager)
-
-            val perAppPolicy = accessPoliciesCache.getOrDefault(appPackageName, DEFAULT)
-            val isSystemApp = getPackageMetadata(appPackageName, context.packageManager).isSystem
-            var appliedPolicy = perAppPolicy
-
-            if (perAppPolicy == DEFAULT) {
-                if (defaultForwardPolicy != ALLOW && isSystemApp) { // System app
-                    appliedPolicy = systemAppsForwardPolicy
-                }
-                if (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") { // Multicast
-                    val multicastPolicy =
-                        if (defaultForwardPolicy == BLOCK && !allowMulticast) BLOCK else ALLOW
-                    appliedPolicy = if (appliedPolicy == ALLOW) ALLOW else multicastPolicy
-                }
-                if (packetHeader.destination.port == 53) { // DNS
-                    val dnsPolicy = if (defaultForwardPolicy == BLOCK && !allowDns) BLOCK else ALLOW
-                    appliedPolicy = if (appliedPolicy == ALLOW) ALLOW else dnsPolicy
-                }
-
-                val isDnsNotificationHidden =
-                    defaultForwardPolicy == ALLOW && packetHeader.destination.port == 53 && hideDnsNot
-                val isMulticastNotificationHidden =
-                    defaultForwardPolicy == ALLOW && (packetHeader.destination.address.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") && hideMulticastNot
-
-                if (!isDnsNotificationHidden && !isMulticastNotificationHidden) {
-                    vpnNotificationManager.postNotification(
-                        packageName = appPackageName,
-                        appliedPolicy,
-                        packetHeader.destination
-                    )
-                }
-            }
-            return Pair(appliedPolicy, appPackageName)
-        } else {
-            if (ipAddress.isMulticastAddress || ipAddress.hostAddress == "255.255.255.255") {
-                val policy = if (defaultForwardPolicy == BLOCK && !allowMulticast) BLOCK else ALLOW
-                return Pair(policy, PACKAGE_NAME_UNKNOWN)
-            }
-
-            if (packetHeader.destination.port == 53) {
-                val policy = if (defaultForwardPolicy == BLOCK && !allowDns) BLOCK else ALLOW
-                return Pair(policy, PACKAGE_NAME_UNKNOWN)
-            }
-            return Pair(DEFAULT, PACKAGE_NAME_UNKNOWN)
+        if (decision.shouldNotify) {
+            vpnNotificationManager.postNotification(
+                packageName = appPackageName,
+                decision.appliedPolicy,
+                packetHeader.destination
+            )
         }
+        return Pair(decision.shouldForward, appPackageName)
     }
 
     fun stop() {

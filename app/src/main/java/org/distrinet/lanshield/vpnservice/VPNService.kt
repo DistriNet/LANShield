@@ -24,8 +24,8 @@ import kotlinx.coroutines.launch
 import org.distrinet.lanshield.ALLOW_DNS
 import org.distrinet.lanshield.ALLOW_MULTICAST
 import org.distrinet.lanshield.DEFAULT_POLICY_KEY
-import org.distrinet.lanshield.HIDE_DNS_NOT
-import org.distrinet.lanshield.HIDE_MULTICAST_NOT
+import org.distrinet.lanshield.HIDE_DNS_NOTIFICATIONS
+import org.distrinet.lanshield.HIDE_MULTICAST_NOTIFICATIONS
 import org.distrinet.lanshield.MainActivity
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
@@ -59,8 +59,8 @@ class VPNService : VpnService(), IProtectSocket {
     private lateinit var systemAppsForwardPolicyLive: LiveData<Policy>
     private lateinit var allowMulticastLive: LiveData<Boolean>
     private lateinit var allowDnsLive: LiveData<Boolean>
-    private lateinit var hideMulticastNotLive: LiveData<Boolean>
-    private lateinit var hideDnsNotLive: LiveData<Boolean>
+    private lateinit var hideMulticastNotificationsLive: LiveData<Boolean>
+    private lateinit var hideDnsNotificationsLive: LiveData<Boolean>
 
     private var isVPNRunning = false
 
@@ -109,12 +109,12 @@ class VPNService : VpnService(), IProtectSocket {
             it[ALLOW_DNS] ?: false
         }.distinctUntilChanged().asLiveData()
 
-        hideMulticastNotLive = dataStore.data.map {
-            it[HIDE_MULTICAST_NOT] ?: false
+        hideMulticastNotificationsLive = dataStore.data.map {
+            it[HIDE_MULTICAST_NOTIFICATIONS] ?: false
         }.distinctUntilChanged().asLiveData()
 
-        hideDnsNotLive = dataStore.data.map {
-            it[HIDE_DNS_NOT] ?: false
+        hideDnsNotificationsLive = dataStore.data.map {
+            it[HIDE_DNS_NOTIFICATIONS] ?: false
         }.distinctUntilChanged().asLiveData()
 
 
@@ -352,8 +352,8 @@ class VPNService : VpnService(), IProtectSocket {
         systemAppsForwardPolicyLive.observeForever(vpnRunnable!!.systemAppsPolicyObserver)
         allowMulticastLive.observeForever(vpnRunnable!!.allowMulticastObserver)
         allowDnsLive.observeForever(vpnRunnable!!.allowDnsObserver)
-        hideMulticastNotLive.observeForever(vpnRunnable!!.hideMulticastNotObserver)
-        hideDnsNotLive.observeForever(vpnRunnable!!.hideDnsNotObserver)
+        hideMulticastNotificationsLive.observeForever(vpnRunnable!!.hideMulticastNotificationsObserver)
+        hideDnsNotificationsLive.observeForever(vpnRunnable!!.hideDnsNotificationsObserver)
 
         vpnThread = Thread(vpnRunnable, "VPN thread")
 
