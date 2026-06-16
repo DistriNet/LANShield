@@ -276,6 +276,9 @@ public class SessionHandler {
 		if(session != null){
 			session.cancelKey();
 			manager.closeSession(session);
+			// Abort so the keepSessionAlive block below doesn't re-insert this just-closed
+			// session as a dead-channel zombie (which would block reuse of the client port).
+			session.setAbortingConnection(true);
 			Log.d(TAG,"ACK to client's FIN and close session => "+ip.getDestinationIP().toString()+":"+tcp.getDestinationPort()
 					+"-"+ip.getSourceIP().toString()+":"+tcp.getSourcePort());
 		}
