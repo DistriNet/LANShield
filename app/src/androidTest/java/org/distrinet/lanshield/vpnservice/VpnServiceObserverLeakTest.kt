@@ -53,7 +53,7 @@ class VpnServiceObserverLeakTest {
     )
 
     @Test
-    fun `stop removes every observer it added`() {
+    fun stop_removesEveryObserverItAdded() {
         val context = ApplicationProvider.getApplicationContext<Context>()
         grantVpnConsent(context.packageName)
         assumeTrue("VPN consent unavailable on this device/image", VpnService.prepare(context) == null)
