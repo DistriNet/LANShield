@@ -23,10 +23,14 @@ import androidx.compose.material.icons.rounded.Lan
 import androidx.compose.material.icons.rounded.Mood
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Policy
+import androidx.compose.material.icons.rounded.Print
 import androidx.compose.material.icons.rounded.QuestionMark
 import androidx.compose.material.icons.rounded.RocketLaunch
+import androidx.compose.material.icons.rounded.Router
 import androidx.compose.material.icons.rounded.Science
+import androidx.compose.material.icons.rounded.Speaker
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SentimentVerySatisfied
 import androidx.compose.material.icons.rounded.Settings
@@ -68,6 +72,10 @@ object LANShieldIcons {
     val ExpandCircleDown = Icons.Outlined.ExpandCircleDown
     val Policy = Icons.Rounded.Policy
     val PolicyOutlined = Icons.Outlined.Policy
+    val Printer = Icons.Rounded.Print
+    val Camera = Icons.Rounded.PhotoCamera
+    val Speaker = Icons.Rounded.Speaker
+    val Router = Icons.Rounded.Router
 }
 
 

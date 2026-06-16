@@ -6,6 +6,9 @@
     <string name="all">All</string>
     <string name="allow">Allow</string>
     <string name="allowed">Allowed</string>
+    <string name="allow_notifications">Allow notifications</string>
+    <string name="open_notification_settings">Open notification settings</string>
+    <string name="notifications_enabled">Notifications enabled</string>
     <string name="alter_blocking_policy_on_a_per_app_basis">Alter blocking policy on a per app basis</string>
     <string name="anonymous_sharing">Anonymous sharing</string>
     <string name="any_detected_lan_traffic_will_be_shown_here">Any detected LAN traffic \nwill be shown here</string>
@@ -36,7 +39,7 @@
     <string name="exceptions">Exceptions</string>anonymous
     <string name="feedback">Feedback</string>
     <string name="finish">Finish</string>
-    <string name="get_notified">Get notified</string>
+    <string name="get_notified">Notifications</string>
     <string name="give_feedback">Give feedback</string>
     <string name="in_with_amount_bytes">In: %1$s</string>
     <string name="individual_lan_traffic">Individual LAN traffic</string>
@@ -44,13 +47,14 @@
     <string name="info">Info</string>
     <string name="intro_default_policy">"First, you need to choose whether you want to block or allow LAN access by default. You can override this later for individual apps."</string>
     <string name="intro_finished_feedback">"Got any feedback? You can share your remarks in the Settings tab!"</string>
-    <string name="intro_notification">"LANShield will notify you when an app tries to access the LAN for the first time, letting you allow or block it. In the next step you'll be asked to enable push notifications to receive these alerts. Don't worry, we won't spam you."</string>
+    <string name="intro_notification">"LANShield sends a notification the first time an app tries to reach your local network, so you can allow or block it. Notifications are only used for these local network access events."</string>
     <string name="intro_share_app_usage_content">"To let us better understand app behaviour, we'd like to know which apps didn't access the LAN while being used by you. In order to do so, you can share your app usage with us."</string>
-    <string name="intro_share_app_usage_title">Help us understand which apps don\'t access the LAN</string>
+    <string name="intro_share_app_usage_title">Share app usage</string>
     <string name="intro_share_lan_metrics">"LANShield is part of an academic research project at the university of KU Leuven. You can help us understand why apps access a local network, by sharing information about how the apps on your device interact with your local network. All data is fully anonymized and will never be shared."</string>
-    <string name="intro_share_lan_metrics_more_info">Todo intro_share_lan_metrics_more_info</string>
-    <string name="intro_welcome">"Welcome! LANShield allows you to control which apps have access to your local network."</string>
+    <string name="intro_welcome">"The local networks you connect to are home to printers, cameras, speakers and other devices. LANShield lets you decide which apps can reach them, and which can\'t."</string>
+    <string name="intro_welcome_vpn_reassurance">LANShield works through a local VPN so it can filter LAN traffic on-device. You\'ll see a VPN icon, but nothing is ever sent to the internet.</string>
     <string name="join_our_academic_study">Join our academic study</string>
+    <string name="join_user_study">Join user study</string>
     <string name="join_our_academic_study_by_ku_leuven">Join our academic study by KU Leuven</string>
     <string name="lan_traffic">LAN Traffic</string>
     <string name="lan_traffic_blocking">LAN traffic blocking</string>
@@ -95,6 +99,8 @@
     <string name="share">Share</string>
     <string name="set_a_default_policy">Set a default policy</string>
     <string name="settings">Settings</string>
+    <string name="skip">Skip</string>
+    <string name="continue_label">Continue</string>
     <string name="settings_share_app_usage_info_dialog">Sharing app usage helps us identify which apps do not attempt to access the local network. To proceed, please find the LANShield app on the next screen and select \'Allow\'.</string>
     <string name="share_anonymous_app_usage">Share anonymous app usage</string>
     <string name="share_anonymous_lan_metrics">Share anonymous LAN metrics</string>
@@ -107,6 +113,7 @@
     <string name="total_with_bytes">Total: %1$s</string>
     <string name="unknown">Unknown</string>
     <string name="vpn_notification">VPN notification</string>
+    <string name="why_vpn_icon">Why the VPN icon?</string>
     <string name="vpn_permission_request">VPN permission request</string>
     <string name="notification_permission_required">LANShield needs notification permission to run. Enable notifications to turn it on.</string>
     <string name="you_re_all_set">You\'re all set!</string>
