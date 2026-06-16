@@ -1,13 +1,13 @@
 package tech.httptoolkit.android.vpn
 
+import tech.httptoolkit.android.vpn.util.PacketUtil
+import java.net.InetAddress
 import java.nio.ByteBuffer
 
 /**
- * Builders for raw IPv4 TCP/UDP packets used to drive the forwarding engine in tests.
- *
- * The engine parses inbound packets but does NOT verify their checksums, so we leave
- * checksum fields zero. Length fields, however, must be correct (the parsers and the
- * session code rely on them).
+ * Builders for raw IPv4/IPv6 TCP/UDP/ICMP packets used to drive the forwarding engine in
+ * tests. Checksums aren't verified by the engine so TCP/UDP leave them zero; length fields
+ * must be correct.
  */
 object TestPackets {
 
@@ -18,10 +18,24 @@ object TestPackets {
     const val PSH = 0x08
     const val ACK = 0x10
 
+    const val ICMP_V4_ECHO_REQUEST = 8
+    const val ICMP_V4_ECHO_REPLY = 0
+    const val ICMP_V4_DEST_UNREACHABLE = 3
+    const val ICMP_V6_ECHO_REQUEST = 128
+    const val ICMP_V6_ECHO_REPLY = 129
+    const val ICMP_V6_ROUTER_SOLICITATION = 133
+
     fun ip(dotted: String): ByteArray {
         val parts = dotted.split(".")
         require(parts.size == 4) { "Only IPv4 literals supported: $dotted" }
         return ByteArray(4) { parts[it].toInt().toByte() }
+    }
+
+    /** 16-byte IPv6 address from a literal (e.g. "::1", "fd00::2"). */
+    fun ipv6(literal: String): ByteArray {
+        val bytes = InetAddress.getByName(literal).address
+        require(bytes.size == 16) { "Not an IPv6 literal: $literal" }
+        return bytes
     }
 
     private fun ByteArray.putShort(offset: Int, value: Int) {
@@ -104,4 +118,61 @@ object TestPackets {
     /** Tail [n] bytes of a captured packet as a String (the transport payload). */
     fun payloadString(packet: ByteArray, n: Int): String =
         String(packet, packet.size - n, n)
+
+    /** IPv4 ICMP packet (protocol 1): 8-byte ICMP header + [payload], with a real checksum. */
+    fun icmpPacket(
+        srcIp: String, dstIp: String, type: Int, code: Int,
+        identifier: Int, seq: Int, payload: ByteArray = ByteArray(0),
+    ): ByteArray {
+        val icmpLen = 8 + payload.size
+        val total = 20 + icmpLen
+        val buf = ByteArray(total)
+        writeIpv4Header(buf, total, 1, ip(srcIp), ip(dstIp))
+
+        val i = 20
+        buf[i] = type.toByte()
+        buf[i + 1] = code.toByte()
+        buf.putShort(i + 4, identifier)
+        buf.putShort(i + 6, seq)
+        System.arraycopy(payload, 0, buf, i + 8, payload.size)
+
+        val checksum = PacketUtil.calculateChecksum(buf, i, icmpLen)
+        buf[i + 2] = checksum[0]
+        buf[i + 3] = checksum[1]
+        return buf
+    }
+
+    /** IPv6 ICMP packet (next header 58): 40-byte IPv6 header + the same ICMP layout. */
+    fun icmpv6Packet(
+        srcIp: String, dstIp: String, type: Int, code: Int,
+        identifier: Int, seq: Int, payload: ByteArray = ByteArray(0),
+    ): ByteArray {
+        val icmpLen = 8 + payload.size
+        val total = 40 + icmpLen
+        val buf = ByteArray(total)
+        writeIpv6Header(buf, icmpLen, 58, ipv6(srcIp), ipv6(dstIp))
+
+        val i = 40
+        buf[i] = type.toByte()
+        buf[i + 1] = code.toByte()
+        buf.putShort(i + 4, identifier)
+        buf.putShort(i + 6, seq)
+        System.arraycopy(payload, 0, buf, i + 8, payload.size)
+
+        val checksum = PacketUtil.calculateChecksum(buf, i, icmpLen)
+        buf[i + 2] = checksum[0]
+        buf[i + 3] = checksum[1]
+        return buf
+    }
+
+    private fun writeIpv6Header(
+        buf: ByteArray, payloadLength: Int, nextHeader: Int, src: ByteArray, dst: ByteArray,
+    ) {
+        buf[0] = 0x60.toByte()   // version 6
+        buf.putShort(4, payloadLength)
+        buf[6] = nextHeader.toByte()
+        buf[7] = 64              // hop limit
+        System.arraycopy(src, 0, buf, 8, 16)
+        System.arraycopy(dst, 0, buf, 24, 16)
+    }
 }
