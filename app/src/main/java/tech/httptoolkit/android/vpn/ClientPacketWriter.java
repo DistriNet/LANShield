@@ -30,6 +30,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import tech.httptoolkit.android.TagKt;
+import org.distrinet.lanshield.crashreport.CrashReporterKt;
 
 /**
  * write packet data back to VPN client stream. This class is thread safe.
@@ -42,7 +43,13 @@ public class ClientPacketWriter implements Runnable {
 
 	private final FileOutputStream clientWriter;
 
+	// Defensive upper bound on a single packet to the TUN. Real traffic is well under the MTU
+	// (TCP segments are capped at the MSS, oversized UDP is dropped upstream in SocketChannelReader),
+	// so this should never trigger; if it does it's a logic error we drop rather than crash on.
+	private static final int MAX_WRITE_PACKET_SIZE = 30000;
+
 	private volatile boolean shutdown = false;
+	private volatile boolean alreadyReportedOversize = false;
 	private final BlockingDeque<byte[]> packetQueue = new LinkedBlockingDeque<>();
 
 	public ClientPacketWriter(FileOutputStream clientWriter) {
@@ -50,7 +57,17 @@ public class ClientPacketWriter implements Runnable {
 	}
 
 	public void write(byte[] data) {
-		if (data.length > 30000) throw new Error("Packet too large");
+		if (data.length > MAX_WRITE_PACKET_SIZE) {
+			// Drop instead of throwing: this runs on the NIO thread, and an uncaught Error here
+			// would tear down the whole forwarding engine.
+			Log.w(TAG, "Dropping oversized packet (" + data.length + " bytes)");
+			if (!alreadyReportedOversize) {
+				alreadyReportedOversize = true;
+				CrashReporterKt.getCrashReporter().recordException(
+						new RuntimeException("Dropped oversized packet to TUN: " + data.length + " bytes"));
+			}
+			return;
+		}
 		packetQueue.addLast(data);
 	}
 

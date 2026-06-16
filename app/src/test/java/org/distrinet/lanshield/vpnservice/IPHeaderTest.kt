@@ -103,4 +103,51 @@ class IPHeaderTest {
         val bytes = IntArray(24) { 0 }.also { it[0] = 0x70 }
         IPHeader(buffer(*bytes))
     }
+
+    /**
+     * EXPOSES BUG (Finding 3): the constructor only requires `limit() >= 24` for IPv4, but the TCP
+     * branch then reads `rawPacket.get(ipHeaderLength + 12)` (IPHeader.kt:92) — absolute index 32 for
+     * a standard IHL=5 header. A truncated/crafted TCP packet of 24–32 bytes passes the size check yet
+     * reads out of bounds, throwing IndexOutOfBoundsException instead of the controlled
+     * IllegalArgumentException the parser raises for malformed input.
+     *
+     * This 28-byte packet passes `require(limit >= 24)` (ports live at offsets 20–23) but has no byte
+     * at index 32. Expected once fixed: a controlled IllegalArgumentException (consistent with the
+     * other too-short cases). Until then this FAILS with IndexOutOfBoundsException.
+     */
+    @Test(expected = IllegalArgumentException::class)
+    fun `truncated ipv4 tcp packet does not read out of bounds`() {
+        IPHeader(
+            buffer(
+                0x45, 0x00, 0x00, 0x1C,   // IHL=5, total length = 28
+                0x00, 0x00, 0x00, 0x00,
+                0x40, 0x06, 0x00, 0x00,   // protocol = 6 (TCP)
+                0xC0, 0xA8, 0x01, 0x02,   // src 192.168.1.2
+                0x01, 0x01, 0x01, 0x01,   // dst 1.1.1.1
+                0x9C, 0x40, 0x01, 0xBB,   // src port 40000, dst port 443 (offsets 20-23)
+                0x00, 0x00, 0x00, 0x00,   // partial TCP header (seq) — buffer ends at index 27
+            )
+        )
+    }
+
+    /**
+     * EXPOSES BUG (Finding 3), IPv6 variant: the constructor requires `limit() >= 44`, but the TCP
+     * branch reads `rawPacket.get(40 + 12)` = absolute index 52. This 48-byte packet passes the size
+     * check (ports at offsets 40-43) yet has no byte at index 52.
+     */
+    @Test(expected = IllegalArgumentException::class)
+    fun `truncated ipv6 tcp packet does not read out of bounds`() {
+        IPHeader(
+            buffer(
+                0x60, 0x00, 0x00, 0x00,   // version 6
+                0x00, 0x14, 0x06, 0x40,   // payload length = 20, next header = 6 (TCP), hop limit
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,   // src ::1
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,   // dst ::2
+                0x9C, 0x40, 0x01, 0xBB,   // src port 40000, dst port 443 (offsets 40-43)
+                0x00, 0x00, 0x00, 0x00,   // partial TCP header — buffer ends at index 47
+            )
+        )
+    }
 }
