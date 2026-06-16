@@ -395,9 +395,10 @@ class VPNService : VpnService(), IProtectSocket {
         vpnThread = Thread(vpnRunnable, "VPN thread")
 
         stopLanShieldSession()
-        lanShieldSession = LANShieldSession.createLANShieldSession()
+        val session = LANShieldSession.createLANShieldSession()
+        lanShieldSession = session
         CoroutineScope(Dispatchers.IO).launch {
-            lanShieldSessionDao.insert(lanShieldSession!!)
+            lanShieldSessionDao.insert(session)
         }
         vpnThread!!.start()
         setVPNRunning(true)
