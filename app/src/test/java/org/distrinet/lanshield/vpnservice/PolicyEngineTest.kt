@@ -8,12 +8,6 @@ import org.distrinet.lanshield.Policy.DEFAULT
 import org.junit.Test
 import java.net.InetAddress
 
-/**
- * Pure-JVM tests for the packet forwarding decision engine. This is a
- * behaviour-preserving extraction of the logic previously inline in
- * [VPNRunnable.shouldForwardPacket]; the cases below double as the executable
- * specification for that decision matrix.
- */
 class PolicyEngineTest {
 
     private val unicast: InetAddress = InetAddress.getByName("8.8.8.8")

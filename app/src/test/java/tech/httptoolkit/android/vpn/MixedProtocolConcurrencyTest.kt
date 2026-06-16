@@ -17,12 +17,6 @@ import java.net.Socket
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * Stress / consistency check: TCP downloads, UDP echo flows and ICMP pings run through the one
- * engine at the same time, exercising the shared NIO thread and session table under mixed load.
- * It asserts the protocols never bleed into each other — each TCP download in order on its own
- * port, each UDP reply on its own port, ICMP answered but never connection-tracked.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class MixedProtocolConcurrencyTest {

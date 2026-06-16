@@ -14,15 +14,6 @@ import java.net.Socket
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * Verifies TCP receive-window flow control on the download (server -> app) path: the engine
- * must never have more unacknowledged data in flight than the client's advertised window.
- *
- * Previously the engine ignored the window and pushed the whole response unacknowledged,
- * which is why large downloads failed in slow-draining clients (Firefox while Chrome/curl
- * succeeded). This drives a download where the client advertises a tiny window and sends NO
- * further ACKs, and asserts the engine stops after ~one window instead of over-sending.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class TcpDownloadFlowControlTest {

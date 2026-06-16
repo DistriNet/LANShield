@@ -19,15 +19,6 @@ import java.net.Socket
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * End-to-end correctness checks on the engine's connection tracking, through the real
- * forwarding pipeline against loopback peers. Exercises both directions:
- *
- *  - egress (packet intercepted from a local app): the engine creates/reuses the right
- *    session per 5-tuple, and demultiplexes concurrent connections without crossing streams;
- *  - ingress (data coming back from the LAN peer): each reply is routed back to the exact
- *    client connection that originated it, and traffic for an unknown connection is rejected.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class ConnectionTrackingForwardingTest {

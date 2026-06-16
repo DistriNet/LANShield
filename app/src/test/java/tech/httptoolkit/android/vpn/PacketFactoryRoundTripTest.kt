@@ -10,10 +10,6 @@ import tech.httptoolkit.android.vpn.transport.udp.UDPHeader
 import tech.httptoolkit.android.vpn.transport.udp.UDPPacketFactory
 import java.nio.ByteBuffer
 
-/**
- * Pure-JVM round-trip tests for the packet factories: parse a crafted packet, feed the
- * parsed headers into a response builder, and re-parse to confirm fields/flags/payload.
- */
 class PacketFactoryRoundTripTest {
 
     private fun parseIpTcp(packet: ByteArray): Pair<IPHeader, TCPHeader> {

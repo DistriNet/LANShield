@@ -13,15 +13,6 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
-/**
- * Finding 1 (fixed): a UDP peer reply larger than the TUN MTU cannot be delivered as a single packet
- * and used to crash the NIO thread (ClientPacketWriter threw an Error on >30000-byte packets). The fix
- * drops oversized UDP responses in [SocketChannelReader.readUDP] (reporting once to Crashlytics) and
- * never crashes the engine.
- *
- * This test feeds a flow, has the peer send a >MTU reply (must be dropped — never reaches the TUN) and
- * then a small reply (must still be forwarded), proving the engine dropped the big one and stayed alive.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class UdpLargeDatagramForwardingTest {

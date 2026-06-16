@@ -11,10 +11,6 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
-/**
- * Tests the app-id / package resolution logic in LANShieldApplication.kt. Runs under
- * Robolectric so a real [ApplicationInfo] can be constructed; [PackageManager] is mocked.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class PackageResolutionTest {

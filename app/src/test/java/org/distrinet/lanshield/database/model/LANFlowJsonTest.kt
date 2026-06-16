@@ -13,11 +13,6 @@ import java.io.StringWriter
 import java.net.InetAddress
 import java.net.InetSocketAddress
 
-/**
- * Robolectric is required here because [LANFlow.toJSON]/[LANFlow.writeJson] use
- * `org.json.JSONObject` and `android.util.JsonWriter`, which are stubbed (and throw)
- * under plain unit tests.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class LANFlowJsonTest {

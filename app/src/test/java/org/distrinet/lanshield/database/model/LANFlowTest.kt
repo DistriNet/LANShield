@@ -9,11 +9,6 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
-/**
- * Pure-JVM tests for the side-effect-free parts of [LANFlow]. JSON serialization
- * (which relies on `org.json` / `android.util.JsonWriter`) is covered separately
- * under Robolectric in [LANFlowJsonTest].
- */
 class LANFlowTest {
 
     private val remote = InetSocketAddress(InetAddress.getByName("8.8.8.8"), 443)

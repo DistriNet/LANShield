@@ -16,13 +16,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
-/**
- * End-to-end tests of the windowed download path against a real loopback server: the engine
- * must never have more than the client's advertised window of unacknowledged data in flight,
- * must resume sending when an ACK reopens the window, must backpressure the upstream so a
- * large file isn't pulled into memory, and must deliver the whole file in order to a
- * conformant (windowed) client.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class TcpWindowedDownloadTest {

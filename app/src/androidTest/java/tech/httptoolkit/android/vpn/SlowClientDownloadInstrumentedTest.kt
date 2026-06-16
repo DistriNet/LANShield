@@ -27,20 +27,6 @@ import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
-/**
- * On-device (instrumented) end-to-end test of the TCP download flow-control fix, running the
- * REAL forwarding engine (SessionHandler / SessionManager / SocketNIODataService) against a
- * real loopback server on the device.
- *
- * It models a slow-draining client (like Firefox) by acting as the client's TCP stack: it
- * advertises a small receive window and acks the contiguous prefix as it consumes each
- * segment. Because the engine now respects that window, it never over-sends, so nothing is
- * dropped and the whole file is delivered in order — the on-device proof that the download
- * completes instead of stalling.
- *
- * Self-contained (the unit-test ForwardingTestHarness/TestPackets are not visible to
- * androidTest), so it inlines a minimal capturing writer and TCP packet builder.
- */
 @RunWith(AndroidJUnit4::class)
 class SlowClientDownloadInstrumentedTest {
 

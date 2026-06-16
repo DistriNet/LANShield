@@ -18,23 +18,6 @@ import java.net.Socket
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * The tun interface is assigned a synthetic VPN address (10.215.173.1), but because the
- * kernel picks a packet's source address from the destination, intercepted packets arrive
- * with two different source IPs:
- *
- *  - the VPN-tun IP (10.215.173.1) for destinations outside the device's own subnet, and
- *  - the device's real wlan IP (e.g. 192.168.1.100) for destinations on the local subnet.
- *
- * The forwarding engine handles the source IP opaquely, so both forms must round-trip
- * symmetrically: the peer's reply must return to the TUN addressed to whatever source the
- * client used, and the recorded [LANFlow.localEndpoint] must carry that same source. These
- * parameterized tests lock that in for both source-IP forms, for UDP and TCP.
- *
- * Only the client source IP is varied; the peer stays on loopback (127.0.0.1) since a JVM
- * test can't bind a peer on a real 192.168.x subnet and the engine connects to the
- * destination regardless of source.
- */
 @RunWith(ParameterizedRobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class SourceAddressForwardingTest(

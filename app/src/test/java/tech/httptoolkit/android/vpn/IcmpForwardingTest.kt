@@ -15,11 +15,6 @@ import tech.httptoolkit.android.vpn.transport.icmp.ICMPPacketFactory
 import tech.httptoolkit.android.vpn.transport.ip.IPPacketFactory
 import java.nio.ByteBuffer
 
-/**
- * Tests the engine's ICMP handling: echo requests proxied to a reachable host and the reply
- * returned to the client (live, against loopback), reply construction (factory round-trip),
- * types we can't proxy dropped/rejected, and that ICMP is never connection-tracked.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class IcmpForwardingTest {
