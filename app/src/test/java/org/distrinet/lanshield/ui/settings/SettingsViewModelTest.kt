@@ -21,11 +21,6 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
-/**
- * Exercises [SettingsViewModel] against a real (file-backed) Preferences DataStore.
- * DataStore-core is pure JVM, so no Robolectric is needed; the view-model's
- * `viewModelScope` is driven by overriding the Main dispatcher.
- */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class SettingsViewModelTest {
 

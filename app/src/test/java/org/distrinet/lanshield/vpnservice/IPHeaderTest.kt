@@ -104,17 +104,6 @@ class IPHeaderTest {
         IPHeader(buffer(*bytes))
     }
 
-    /**
-     * EXPOSES BUG (Finding 3): the constructor only requires `limit() >= 24` for IPv4, but the TCP
-     * branch then reads `rawPacket.get(ipHeaderLength + 12)` (IPHeader.kt:92) — absolute index 32 for
-     * a standard IHL=5 header. A truncated/crafted TCP packet of 24–32 bytes passes the size check yet
-     * reads out of bounds, throwing IndexOutOfBoundsException instead of the controlled
-     * IllegalArgumentException the parser raises for malformed input.
-     *
-     * This 28-byte packet passes `require(limit >= 24)` (ports live at offsets 20–23) but has no byte
-     * at index 32. Expected once fixed: a controlled IllegalArgumentException (consistent with the
-     * other too-short cases). Until then this FAILS with IndexOutOfBoundsException.
-     */
     @Test(expected = IllegalArgumentException::class)
     fun `truncated ipv4 tcp packet does not read out of bounds`() {
         IPHeader(
@@ -130,11 +119,6 @@ class IPHeaderTest {
         )
     }
 
-    /**
-     * EXPOSES BUG (Finding 3), IPv6 variant: the constructor requires `limit() >= 44`, but the TCP
-     * branch reads `rawPacket.get(40 + 12)` = absolute index 52. This 48-byte packet passes the size
-     * check (ports at offsets 40-43) yet has no byte at index 52.
-     */
     @Test(expected = IllegalArgumentException::class)
     fun `truncated ipv6 tcp packet does not read out of bounds`() {
         IPHeader(

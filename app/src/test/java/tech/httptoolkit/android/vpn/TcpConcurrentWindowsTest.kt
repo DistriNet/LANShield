@@ -15,13 +15,6 @@ import java.net.Socket
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * Drives many concurrent TCP downloads through the one engine, each advertising a *different*
- * receive window. All flows share one capture queue and are demultiplexed by destination port,
- * so the test also proves connection tracking keeps the streams separate: each flow is
- * delivered strictly in order, in full, with unacked data never exceeding its own window, and
- * a client port can be reused once the previous connection is torn down.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class TcpConcurrentWindowsTest {

@@ -13,12 +13,6 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
-/**
- * Connection-tracking and forwarding checks for UDP under concurrency: many simultaneous
- * flows demultiplex back to the right client, the same source port to different destinations
- * is tracked as separate connections, and a burst of datagrams on one connection keeps its
- * message boundaries and ordering. Egress counters accumulate per connection.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class UdpConcurrentFlowsTest {

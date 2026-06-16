@@ -14,11 +14,6 @@ import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 
-/**
- * End-to-end UDP forwarding against a real loopback peer: feed a UDP packet into the
- * engine, assert the peer receives it (egress), the peer's reply is emitted back to the
- * TUN (ingress), and a LANFlow is recorded with updated counters.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class UdpForwardingTest {

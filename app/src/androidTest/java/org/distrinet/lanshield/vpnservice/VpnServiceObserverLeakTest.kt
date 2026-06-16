@@ -22,20 +22,6 @@ import java.io.FileInputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-/**
- * EXPOSES BUG (Finding 2): [VPNService.startVPNThread] registers seven `observeForever` observers but
- * [VPNService.stopVPNThread] removes only three. The four it forgets — `allowMulticastLive`,
- * `allowDnsLive`, `hideMulticastNotificationsLive`, `hideDnsNotificationsLive` — stay attached after
- * the VPN stops, leaking the old [VPNRunnable] on every stop/restart cycle.
- *
- * The test drives the real service (start → stop) on a device/emulator, grabbing the running
- * [VPNService] instance from `ActivityThread.mServices` so it can inspect the private LiveData fields.
- * After the stop, every observer added at start should be gone; the four leaked sources still report
- * observers, so `stop removes every observer it added` FAILS until the leak is fixed.
- *
- * Like [VpnServiceStartCommandTest], it self-skips where VPN consent cannot be granted, keeping
- * consent automation out of mandatory CI.
- */
 @RunWith(AndroidJUnit4::class)
 class VpnServiceObserverLeakTest {
 

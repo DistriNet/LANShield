@@ -4,11 +4,6 @@ import tech.httptoolkit.android.vpn.util.PacketUtil
 import java.net.InetAddress
 import java.nio.ByteBuffer
 
-/**
- * Builders for raw IPv4/IPv6 TCP/UDP/ICMP packets used to drive the forwarding engine in
- * tests. Checksums aren't verified by the engine so TCP/UDP leave them zero; length fields
- * must be correct.
- */
 object TestPackets {
 
     // TCP flag bits
@@ -80,10 +75,6 @@ object TestPackets {
         return buf
     }
 
-    /**
-     * IPv4 TCP packet. When [mss] is non-null an MSS option is added (data offset 6),
-     * otherwise a plain 20-byte TCP header (data offset 5) is used.
-     */
     fun tcpPacket(
         srcIp: String, srcPort: Int, dstIp: String, dstPort: Int,
         seq: Long, ack: Long, flags: Int, payload: ByteArray = ByteArray(0), mss: Int? = null,

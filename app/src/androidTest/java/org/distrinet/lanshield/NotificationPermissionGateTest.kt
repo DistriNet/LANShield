@@ -27,20 +27,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
 
-/**
- * End-to-end test of the notification-permission gate on enable (MainActivity.startVPNService): with
- * POST_NOTIFICATIONS denied, requesting enable must drive the real system permission dialog, and the
- * VPN must start only if the user grants it.
- *
- * The enable request is posted through the same VPN_SERVICE_ACTION.START_VPN signal the Overview
- * switch emits, rather than by tapping the Compose switch — the switch's StateFlow does not propagate
- * reliably under the Compose test rule, and the switch->signal wiring is not what this test covers.
- * From there everything is real: MainActivity's gate, the system permission dialog (driven by
- * UiAutomator), and the resulting VPN service state. VPN consent is pre-granted via the ACTIVATE_VPN
- * app-op so the only dialog in play is the notification one. Where the dialog can't be driven the
- * test self-skips rather than failing, matching the project's choice to keep dialog automation out
- * of mandatory CI.
- */
 @RunWith(AndroidJUnit4::class)
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 class NotificationPermissionGateTest {

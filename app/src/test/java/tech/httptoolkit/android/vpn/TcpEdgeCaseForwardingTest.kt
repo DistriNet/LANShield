@@ -16,12 +16,6 @@ import java.net.SocketTimeoutException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * Adversarial / edge-case checks on the TCP path: 32-bit sequence wraparound in the ACK
- * accounting, a zero receive window that later reopens, RST teardown, FIN acknowledgement,
- * out-of-order (duplicate) client data, and a retransmitted SYN. These are the corners where
- * the sequence arithmetic and connection-tracking are most likely to misbehave.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class TcpEdgeCaseForwardingTest {

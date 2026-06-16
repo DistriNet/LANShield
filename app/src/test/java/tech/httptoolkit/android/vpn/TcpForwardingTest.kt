@@ -15,11 +15,6 @@ import java.net.Socket
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
-/**
- * End-to-end TCP forwarding against a real loopback server: drive the handshake, forward
- * client data to the peer, and relay the peer's response back to the TUN. The test maintains
- * its own seq/ack bookkeeping and reads the (random) server ISN from the captured SYN-ACK.
- */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], application = Application::class)
 class TcpForwardingTest {

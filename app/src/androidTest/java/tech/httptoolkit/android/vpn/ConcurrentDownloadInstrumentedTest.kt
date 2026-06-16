@@ -28,15 +28,6 @@ import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
-/**
- * On-device end-to-end test running several windowed TCP downloads through the real engine at
- * once, each with a different receive window. Proves on a real Android TCP stack + NIO selector
- * that concurrent flows are tracked and flow-controlled independently: each delivered in order,
- * in full, with unacked data never exceeding its own window, and no bytes leaking across ports.
- *
- * Self-contained (the unit-test harness isn't visible to androidTest): it inlines a capturing
- * writer and minimal TCP packet builders.
- */
 @RunWith(AndroidJUnit4::class)
 class ConcurrentDownloadInstrumentedTest {
 

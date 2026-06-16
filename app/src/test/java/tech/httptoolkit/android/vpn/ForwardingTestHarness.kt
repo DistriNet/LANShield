@@ -22,11 +22,6 @@ import java.nio.ByteBuffer
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 
-/**
- * Captures packets the engine would write back to the TUN interface, instead of writing
- * them to a real file descriptor. [write] is overridable on the base class, so this never
- * touches the (throwaway) FileOutputStream and never needs the drain thread.
- */
 class CapturingClientPacketWriter(out: FileOutputStream) : ClientPacketWriter(out) {
     val queue = LinkedBlockingQueue<ByteArray>()
     override fun write(data: ByteArray) {
@@ -34,16 +29,6 @@ class CapturingClientPacketWriter(out: FileOutputStream) : ClientPacketWriter(ou
     }
 }
 
-/**
- * Reusable harness that wires up the real forwarding engine against an in-memory database
- * and a capturing packet writer, with socket protection stubbed out so the engine uses
- * ordinary OS sockets. Lets tests feed crafted packets and observe both the TUN-bound
- * output and the recorded flows. Lives in package `tech.httptoolkit.android.vpn` so it can
- * use the engine's package-visible API.
- *
- * Place `@RunWith(RobolectricTestRunner)` `@Config(sdk=[34], application=Application)` on the
- * test classes that use it; create one per test and `close()` it in `@After`.
- */
 class ForwardingTestHarness : AutoCloseable {
 
     val db: AppDatabase
@@ -86,11 +71,6 @@ class ForwardingTestHarness : AutoCloseable {
     fun pollTunPacket(timeoutMs: Long = 2000): ByteArray? =
         writer.queue.poll(timeoutMs, TimeUnit.MILLISECONDS)
 
-    /**
-     * Await the first captured TUN packet matching [predicate], discarding non-matching
-     * packets along the way (the engine emits several packets per flow, e.g. an ACK before
-     * a data segment, so filter rather than assume order).
-     */
     fun awaitTunPacketMatching(timeoutMs: Long = 2000, predicate: (ByteArray) -> Boolean): ByteArray {
         val deadline = System.nanoTime() + timeoutMs * 1_000_000
         while (System.nanoTime() < deadline) {

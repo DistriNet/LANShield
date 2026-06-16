@@ -20,17 +20,6 @@ import java.io.FileInputStream
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 
-/**
- * On-device test for [VPNService] start/stop dispatch — the fix that keeps the VPN alive across
- * OS-initiated restarts.
- *
- * Drives the real VpnService through start → restart → stop and asserts the VPN comes up, survives
- * an action-less restart (the closest a test can get to the system's null re-delivery after a kill
- * or via always-on VPN), and is torn down only on an explicit stop. Establishing a tunnel needs VPN
- * consent, which it grants non-interactively via the ACTIVATE_VPN app-op (works on a debuggable
- * emulator image). Where that grant is not permitted the test self-skips via [assumeTrue] instead
- * of failing, matching the project's choice to keep VPN-consent automation out of mandatory CI.
- */
 @RunWith(AndroidJUnit4::class)
 class VpnServiceStartCommandTest {
 
@@ -97,10 +86,6 @@ class VpnServiceStartCommandTest {
         }
     }
 
-    /**
-     * Pre-authorizes this package as a VPN by flipping the ACTIVATE_VPN app-op, so
-     * [VpnService.prepare] returns null and no consent dialog is needed.
-     */
     private fun grantVpnConsent(packageName: String) {
         executeShellCommand("appops set $packageName ACTIVATE_VPN allow")
     }
