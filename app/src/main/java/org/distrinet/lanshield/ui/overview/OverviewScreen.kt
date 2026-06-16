@@ -52,6 +52,14 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.distrinet.lanshield.Policy
 import org.distrinet.lanshield.R
@@ -60,6 +68,8 @@ import org.distrinet.lanshield.VPN_ALWAYS_ON_STATUS
 import org.distrinet.lanshield.VPN_SERVICE_STATUS
 import org.distrinet.lanshield.ui.LANShieldIcons
 import org.distrinet.lanshield.ui.theme.LANShieldTheme
+import kotlin.math.PI
+import kotlin.math.cos
 
 @Composable
 internal fun OverviewRoute(
@@ -172,13 +182,9 @@ internal fun OverviewScreen(
                 }
             }
 
-            Image(
-                painter = painterResource(id = R.mipmap.logo_foreground), // replace 'logo' with the actual name of your logo file
-                contentDescription = stringResource(id = R.string.lanshield_logo),
-                modifier = Modifier
-                    .size(150.dp)
-                    .align(Alignment.CenterHorizontally), // adjust the size as needed
-                contentScale = ContentScale.Crop
+            ShieldHero(
+                enabled = isSwitchChecked,
+                modifier = Modifier.align(Alignment.CenterHorizontally),
             )
             Text(
                 modifier = Modifier
@@ -290,6 +296,74 @@ internal fun TopBarOverview(modifier: Modifier = Modifier) {
         modifier = modifier
     )
 }
+
+@Composable
+private fun ShieldHero(
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val context = LocalContext.current
+    val animationsEnabled = remember {
+        Settings.Global.getFloat(
+            context.contentResolver,
+            Settings.Global.ANIMATOR_DURATION_SCALE,
+            1f,
+        ) != 0f
+    }
+
+    val pulse = remember { mutableFloatStateOf(0f) }
+    LaunchedEffect(enabled, animationsEnabled) {
+        if (!enabled) {
+            pulse.floatValue = 0f
+            return@LaunchedEffect
+        }
+        if (!animationsEnabled) {
+            pulse.floatValue = 1f
+            return@LaunchedEffect
+        }
+        val start = withFrameNanos { it }
+        while (true) {
+            val now = withFrameNanos { it }
+            val t = (now - start) / 1_000_000f / BREATHE_MS
+            pulse.floatValue = (1f - cos(t * 2f * PI.toFloat())) / 2f
+        }
+    }
+
+    val glowColor = if (isSystemInDarkTheme()) GlowGreenDark else GlowGreenLight
+    val logoSize = 150.dp
+
+    Box(modifier = modifier.size(232.dp), contentAlignment = Alignment.Center) {
+        if (enabled) {
+            Image(
+                painter = painterResource(R.mipmap.logo_foreground),
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                colorFilter = ColorFilter.tint(glowColor),
+                modifier = Modifier
+                    .size(logoSize * 1.5f)
+                    .blur(36.dp)
+                    .graphicsLayer {
+                        val p = pulse.floatValue
+                        alpha = 0.22f + 0.30f * p
+                        val s = 1f + 0.06f * p
+                        scaleX = s
+                        scaleY = s
+                    },
+            )
+        }
+        Image(
+            painter = painterResource(R.mipmap.logo_foreground),
+            contentDescription = stringResource(R.string.lanshield_logo),
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.size(logoSize),
+        )
+    }
+}
+
+private const val BREATHE_MS = 3200f
+
+private val GlowGreenLight = Color(0xFF146C2E)
+private val GlowGreenDark = Color(0xFF8BD89B)
 
 
 @Composable
