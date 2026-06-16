@@ -21,6 +21,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.AbstractSelectableChannel;
 
 import tech.httptoolkit.android.TagKt;
+import org.distrinet.lanshield.crashreport.CrashReporterKt;
 
 /**
  * Takes a session, and reads all available upstream data back into it.
@@ -33,8 +34,20 @@ class SocketChannelReader {
 
 	private final ClientPacketWriter writer;
 
+	// Report an oversized-UDP drop to Crashlytics at most once per reader, so a misbehaving peer
+	// flooding jumbo datagrams can't flood the crash reporter (each drop is still Log.w'd).
+	private volatile boolean alreadyReportedOversize = false;
+
 	public SocketChannelReader(ClientPacketWriter writer) {
 		this.writer = writer;
+	}
+
+	private void reportOversizeOnce(int packetLength) {
+		if (alreadyReportedOversize) return;
+		alreadyReportedOversize = true;
+		CrashReporterKt.getCrashReporter().recordException(
+				new RuntimeException("Dropped oversized UDP response packet: " + packetLength
+						+ " bytes (MTU " + DataConst.MTU + ")"));
 	}
 
 	// When staged-but-unsent upstream bytes reach this, stop reading so the upstream TCP window
@@ -226,6 +239,16 @@ class SocketChannelReader {
 					System.arraycopy(buffer.array(),0, data, 0, len);
 					byte[] packetData = UDPPacketFactory.createResponsePacket(
 							session.getLastIpHeader(), session.getLastUdpHeader(), data);
+
+					if (packetData.length > DataConst.MTU) {
+						// Can't be delivered over the TUN (MTU 1500) without IP fragmentation, which
+						// the engine doesn't do. Drop it rather than hand the writer a jumbo packet.
+						Log.w(TAG, "Dropping oversized UDP response (" + packetData.length
+								+ " bytes > MTU " + DataConst.MTU + ")");
+						reportOversizeOnce(packetData.length);
+						buffer.clear();
+						continue;
+					}
 
 					//write to client
 					writer.write(packetData);

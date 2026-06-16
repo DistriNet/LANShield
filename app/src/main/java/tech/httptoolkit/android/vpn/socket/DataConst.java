@@ -21,4 +21,9 @@ package tech.httptoolkit.android.vpn.socket;
  */
 public class DataConst {
 	public static final int MAX_RECEIVE_BUFFER_SIZE = 65535;
+
+	// The TUN interface MTU; mirrors VPNService.setMtu(MAX_PACKET_LEN). Packets emitted to the
+	// client must not exceed this, so oversized (e.g. large UDP) responses are dropped rather than
+	// forwarded as an un-deliverable jumbo packet.
+	public static final int MTU = 1500;
 }

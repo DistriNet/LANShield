@@ -89,6 +89,10 @@ class IPHeader(packetBuffer: ByteBuffer) {
             } else {
                 40
             }
+            // The TCP data-offset byte lives at ipHeaderLength + 12; the size checks above
+            // (>= 24 / >= 44) don't guarantee it, so reject truncated/crafted TCP packets with a
+            // controlled IllegalArgumentException instead of an IndexOutOfBoundsException.
+            require(rawPacket.limit() >= ipHeaderLength + 13) { "Truncated TCP packet" }
             val dataOffsetAndNs: Int = rawPacket.get(ipHeaderLength + 12).toInt()
             val tcpHeaderLength = dataOffsetAndNs.and(0xF0).shr(4) * 4
 

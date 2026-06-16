@@ -92,35 +92,40 @@ class VPNService : VpnService(), IProtectSocket {
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        defaultForwardPolicyLive = dataStore.data.map {
-            Policy.valueOf(
-                it[DEFAULT_POLICY_KEY] ?: Policy.DEFAULT.toString()
-            )
-        }.distinctUntilChanged().asLiveData()
-        systemAppsForwardPolicyLive = dataStore.data.map {
-            Policy.valueOf(
-                it[SYSTEM_APPS_POLICY_KEY] ?: Policy.DEFAULT.toString()
-            )
-        }.distinctUntilChanged().asLiveData()
+        // Initialize once and keep the same LiveData instances for the service's lifetime. onStartCommand
+        // runs again on every restart (incl. the STOP path), and re-creating these would leave the
+        // observers added by startVPNThread() attached to orphaned instances that stopVPNThread() can no
+        // longer remove — leaking the VPNRunnable.
+        if (!this::defaultForwardPolicyLive.isInitialized) {
+            defaultForwardPolicyLive = dataStore.data.map {
+                Policy.valueOf(
+                    it[DEFAULT_POLICY_KEY] ?: Policy.DEFAULT.toString()
+                )
+            }.distinctUntilChanged().asLiveData()
+            systemAppsForwardPolicyLive = dataStore.data.map {
+                Policy.valueOf(
+                    it[SYSTEM_APPS_POLICY_KEY] ?: Policy.DEFAULT.toString()
+                )
+            }.distinctUntilChanged().asLiveData()
 
-        allowMulticastLive = dataStore.data.map {
-            it[ALLOW_MULTICAST] ?: false
-        }.distinctUntilChanged().asLiveData()
+            allowMulticastLive = dataStore.data.map {
+                it[ALLOW_MULTICAST] ?: false
+            }.distinctUntilChanged().asLiveData()
 
-        allowDnsLive = dataStore.data.map {
-            it[ALLOW_DNS] ?: false
-        }.distinctUntilChanged().asLiveData()
+            allowDnsLive = dataStore.data.map {
+                it[ALLOW_DNS] ?: false
+            }.distinctUntilChanged().asLiveData()
 
-        hideMulticastNotificationsLive = dataStore.data.map {
-            it[HIDE_MULTICAST_NOTIFICATIONS] ?: false
-        }.distinctUntilChanged().asLiveData()
+            hideMulticastNotificationsLive = dataStore.data.map {
+                it[HIDE_MULTICAST_NOTIFICATIONS] ?: false
+            }.distinctUntilChanged().asLiveData()
 
-        hideDnsNotificationsLive = dataStore.data.map {
-            it[HIDE_DNS_NOTIFICATIONS] ?: false
-        }.distinctUntilChanged().asLiveData()
+            hideDnsNotificationsLive = dataStore.data.map {
+                it[HIDE_DNS_NOTIFICATIONS] ?: false
+            }.distinctUntilChanged().asLiveData()
 
-
-        accessPolicies = lanAccessPolicyDao.getAllLive()
+            accessPolicies = lanAccessPolicyDao.getAllLive()
+        }
 
         updateAlwaysOnStatus()
 
@@ -215,6 +220,10 @@ class VPNService : VpnService(), IProtectSocket {
             accessPolicies.removeObserver(it.accessPoliesObserver)
             defaultForwardPolicyLive.removeObserver(it.defaultPolicyObserver)
             systemAppsForwardPolicyLive.removeObserver(it.systemAppsPolicyObserver)
+            allowMulticastLive.removeObserver(it.allowMulticastObserver)
+            allowDnsLive.removeObserver(it.allowDnsObserver)
+            hideMulticastNotificationsLive.removeObserver(it.hideMulticastNotificationsObserver)
+            hideDnsNotificationsLive.removeObserver(it.hideDnsNotificationsObserver)
             it.stop()
         }
         vpnRunnable = null
