@@ -18,8 +18,8 @@ android {
         applicationId = "org.distrinet.lanshield"
         minSdk = 29
         targetSdk = 36
-        versionCode = 17
-        versionName = "0.95"
+        versionCode = 20
+        versionName = "0.96"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Run each instrumented test in its own process with cleared app data/permissions, so that
@@ -171,7 +171,7 @@ ksp {
 if (wantsPlayStoreBuild) {
     val firebaseConfig = layout.buildDirectory.file("firebase/firebase.gradle.kts").get().asFile
     firebaseConfig.parentFile.mkdirs()
-    file("firebase.gradle.kts.definitelynotagradlefile").copyTo(firebaseConfig, overwrite = true)
+    file("firebase.gradle.kts.excludedforfdroid").copyTo(firebaseConfig, overwrite = true)
     apply(from = firebaseConfig)
 }
 

@@ -2,6 +2,9 @@
 .gradle/
 build/
 
+# F-Droid build cache (fdroiddata clone + build output from scripts/fdroid-build.sh)
+.fdroid-build/
+
 # Kotlin compiler caches
 .kotlin/
 
