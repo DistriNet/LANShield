@@ -32,3 +32,36 @@ jobs:
         with:
           name: unit-test-reports
           path: app/build/reports/
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate CycloneDX SBOM (foss release runtime deps)
+        run: ./gradlew cyclonedxBom --stacktrace
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: build/reports/cyclonedx/bom.json
+
+      # Fails the build when the SBOM contains a package with a known
+      # vulnerability. Accepted findings can be suppressed in osv-scanner.toml.
+      - name: Scan SBOM with OSV-Scanner
+        uses: google/osv-scanner-action/osv-scanner-action@v2.5.1
+        with:
+          scan-args: |-
+            scan
+            source
+            --lockfile=build/reports/cyclonedx/bom.json

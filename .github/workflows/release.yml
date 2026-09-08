@@ -1,0 +1,39 @@
+name: Release assets
+
+# Attaches a CycloneDX SBOM to every GitHub release once it is published.
+# Releases are still created by hand (tag fdroid-release-vX.Y); this only
+# adds the SBOM alongside the APK.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Generate CycloneDX SBOM (foss release runtime deps)
+        run: ./gradlew cyclonedxBom --stacktrace
+
+      - name: Attach SBOM to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp build/reports/cyclonedx/bom.json "lanshield-${{ github.event.release.tag_name }}.cdx.json"
+          gh release upload "${{ github.event.release.tag_name }}" \
+            "lanshield-${{ github.event.release.tag_name }}.cdx.json" --clobber

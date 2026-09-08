@@ -168,6 +168,18 @@ ksp {
     arg("room.schemaLocation", "$projectDir/schemas")
 }
 
+// CycloneDX SBOM of what actually ships in the FOSS release APK.
+// Only the runtime classpath of that variant is scanned, so test libraries,
+// annotation processors and debug-only tooling are left out.
+tasks.cyclonedxDirectBom {
+    projectType = org.cyclonedx.model.Component.Type.APPLICATION
+    componentName = "LANShield"
+    componentVersion = android.defaultConfig.versionName
+    includeConfigs = listOf("fossReleaseRuntimeClasspath")
+    testConfigs = emptyList()
+    xmlOutput.convention(null as org.gradle.api.file.RegularFile?)
+}
+
 if (wantsPlayStoreBuild) {
     val firebaseConfig = layout.buildDirectory.file("firebase/firebase.gradle.kts").get().asFile
     firebaseConfig.parentFile.mkdirs()

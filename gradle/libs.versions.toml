@@ -34,6 +34,7 @@ uiautomator = "2.4.0"
 androidxTestRules = "1.7.0"
 testOrchestrator = "1.6.1"
 testServices = "1.6.0"
+cyclonedx = "3.4.1"
 
 [libraries]
 accompanist-permissions = { module = "com.google.accompanist:accompanist-permissions", version.ref = "accompanistPermissions" }
@@ -100,4 +101,5 @@ unit-test = [
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+cyclonedx-bom = { id = "org.cyclonedx.bom", version.ref = "cyclonedx" }
 
