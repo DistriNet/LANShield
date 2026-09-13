@@ -1,0 +1,57 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- 宽版圆润盾牌 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M 54,28
+                          C 63,33 72,35 80,35
+                          C 80,50 75,64 54,79
+                          C 33,64 28,50 28,35
+                          C 36,35 45,33 54,28 Z" />
+
+    <!-- 弧线 1（更平缓舒展的顶部大弧） -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.0"
+        android:strokeLineCap="round"
+        android:pathData="M 36.5,43.5 C 41.5,39.5 47.5,38 54,38 C 60.5,38 66.5,39.5 71.5,43.5" />
+
+    <!-- 弧线 2 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.0"
+        android:strokeLineCap="round"
+        android:pathData="M 40.5,49.5 C 44.5,46 49,44.5 54,44.5 C 59,44.5 63.5,46 67.5,49.5" />
+
+    <!-- 弧线 3 -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.0"
+        android:strokeLineCap="round"
+        android:pathData="M 44.5,55.5 C 47.5,52.8 50.5,51.5 54,51.5 C 57.5,51.5 60.5,52.8 63.5,55.5" />
+
+    <!-- 弧线 4（内层微弧） -->
+    <path
+        android:fillColor="#00000000"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeWidth="3.0"
+        android:strokeLineCap="round"
+        android:pathData="M 48.5,61.5 C 50.2,59.8 52,59 54,59 C 56,59 57.8,59.8 59.5,61.5" />
+
+    <!-- 底部发射圆点 -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M 54,66
+                          A 2.5,2.5 0 1,0 54.01,66 Z" />
+</vector>
