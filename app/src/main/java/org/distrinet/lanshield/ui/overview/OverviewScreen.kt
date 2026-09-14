@@ -235,7 +235,10 @@ internal fun OverviewScreen(
                                 contentDescription = vpnNotificationContentDescription
                             }
                     ) {
-                        Text("Why is there a VPN notification?", textAlign = TextAlign.Center)
+                        Text(
+                            stringResource(R.string.why_is_there_a_vpn_notification),
+                            textAlign = TextAlign.Center
+                            )
                     }
                 }
 

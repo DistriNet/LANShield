@@ -75,6 +75,7 @@
     <string name="last_24h_with_bytes">Last 24h: %1$s</string>
     <string name="last_seen_with_timestamp">Last seen: %1$s</string>
     <string name="learn_more_on_lanshield_eu">Learn more on lanshield.eu</string>
+    <string name="why_is_there_a_vpn_notification">Why is there a VPN notification?</string>
     <string name="logo">Logo</string>
     <string name="manage_notifications">Manage notifications</string>
     <string name="manually_allowed_app_with_amount">Manually allowed %1$s app%2$s</string>
@@ -132,6 +133,7 @@
     <string name="any_detected_open_ports_will_be_shown_here">Any detected open ports will be shown here</string>
     <string name="no_open_ports_detected">No open ports detected</string>
     <string name="open_ports">Open Ports</string>
+    <string name="LANShield_not_active">LANShield not active</string>
     <string name="open_ports_info">Here you can see a list of ports opened by other apps. These are typically used to communicate with other devices on the same local network, such as for device discovery or media streaming.</string>
     <string name="pull_down_to_refresh">⬇ Pull down to refresh</string>
     <string name="learn_more_on_lanshield_eu_opens_in_browser">Learn more on lanshield.eu, opens in browser</string>

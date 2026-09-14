@@ -186,7 +186,7 @@ private fun LANShieldNotActive(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(48.dp))
 
         Text(
-            text = "LANShield not active",
+            stringResource(R.string.LANShield_not_active),
             modifier = Modifier.fillMaxWidth(),
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.titleMedium,
